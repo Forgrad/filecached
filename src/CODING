@@ -11,7 +11,9 @@ We have the following conventions in our code:
 * Space before braces.
   For example, if (x) { not if (x){.
 
-* Function names are all lower-case separated by underscores.
+* Class names are first letter capitalized word/multi-word, such as ClassName.
+
+* Class member names are word/multi-word with first letter capitalized except for the first word, such as classMember.
 
 * Beginning-of-line indentation via tabs, not spaces.
 
@@ -20,8 +22,6 @@ We have the following conventions in our code:
   static_assert, offsetof.
 
 * Pointer types have spaces: (uint16_t *) not (uint16_t*).
-
-* Multi-word names are lower_case_with_underscores.
 
 * Comments in imported code are usually C /* ... */ comments.
   Comments in new code are C++ style //.
