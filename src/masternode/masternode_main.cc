@@ -11,6 +11,7 @@ namespace filecached
 {
 	class MasterNode
 	{
+	
 	}
 }
 
