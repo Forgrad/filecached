@@ -30,3 +30,14 @@ We have the following conventions in our code:
   Then you can grep -n '^foo' */*.c to find the definition of foo.
 
 * Functions that take no arguments are declared f(void) not f().
+
+在元文件的开头，加上类似的注释行：
+/**************************************************
+ * Created: 2013/3/24
+ * Author: Leo_xy
+ * Email: xy198781@sina.com
+ * Last modified: 2013/3/24 9:24
+ * Version: 0.1
+ * File: src/masternode/request.h
+ * Breif: Header for request handling mechanism.
+ **************************************************/
