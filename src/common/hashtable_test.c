@@ -97,5 +97,4 @@ main(void)
     /* } else { */
     /*     printf("get success: \"%s\"\n", get->str); */
     /* } */
-    
 }

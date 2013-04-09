@@ -12,7 +12,9 @@
 #define CONSTANTS_HEADER
 
 #define HASH_SLOTS 200
-#define MAX_PATH_LENGTH 30
+#define MAX_PATH_LENGTH 128
+#define MAX_SLAVES 20
+#define MAX_BLOCKS 1
 
 #endif
 

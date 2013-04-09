@@ -2,7 +2,7 @@
  * Created: 2013/3/24
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/1 22：00
+ * Last modified: 2013/4/6 23：00
  * Version: 0.1
  * File: src/common/hashtable.h
  * Breif: 哈希表数据结构头文件。
@@ -19,8 +19,8 @@
 
 /* 哈希链表节点数据结构 */
 struct hash_node {
-    char str[MAX_PATH_LENGTH];
-    struct hlist_node list;
+    char str[MAX_PATH_LENGTH];  /* 字符串哈希key值 */
+    struct hlist_node list;     /* 链表节点 */
 };
 
 /* 通过哈希节点指针得到包装结构指针 */
@@ -35,6 +35,9 @@ struct hash_node {
 #define INIT_HASH_NODE(ptr, string) do { strcpy((ptr)->str, string); INIT_HLIST_NODE(&(ptr)->list);} \
     while (0)
 #define HASH_TABLE(name) struct hlist_head name[HASH_SLOTS] = {}
+
+/* 哈希表指针为指向hlist_head的指针 */
+typedef struct hlist_head *hashtable_ptr;
 
 
 /* 从字符串得到哈希值 */
@@ -62,6 +65,24 @@ hash_get(const char *path, const struct hlist_head *head)
     return NULL;
 }
 
+/* 哈希表遍历 */
+static inline int
+for_each_hash_entry(hashtable_ptr head, int (* func)(struct hash_node *))
+{
+    struct hash_node *tpos;
+    struct hlist_node *pos;
+    int ret;
+    int i;
+    for (i = 0; i < HASH_SLOTS; i++) {
+        hlist_for_each_entry(tpos, pos, &head[i], list) {
+            ret = func(tpos);
+            if (ret != 0) return ret;
+        }
+    }
+    return ret;
+}
+
+
 /* 摘除哈希表项 */
 static inline struct hash_node*
 hash_del(const char *path, struct hlist_head *head)
@@ -79,6 +100,7 @@ hash_del(const char *path, struct hlist_head *head)
 /* 如果插入成功，返回该节点地址 */
 /* 如果因为key存在而插入失败，则返回存在的key的地址 */
 /* 其他原因返回NULL */
+/* !!!!需要信号量保护，待实现 */
 static inline struct hash_node*
 hash_insert(struct hash_node *node, struct hlist_head *head)
 {

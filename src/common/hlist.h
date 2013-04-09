@@ -16,13 +16,13 @@
 /* 链表节点数据结构 */
 struct hlist_node
 {
-    struct hlist_node *next,**pprev;
+    struct hlist_node *next,**pprev; /* 下一个节点地址，前一个节点next域地址 */
 };
 
 /* 链表头数据结构 */
 struct hlist_head
 {
-    struct hlist_node* first;
+    struct hlist_node* first;   /* 第一个节点地址 */
 };
 
 /* 链表头、节点初始化宏 */
@@ -100,7 +100,6 @@ hlist_add_after(struct hlist_node *n,
 #define container_of(ptr, type, member) ({			\
         const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
         (type *)( (char *)__mptr - offsetof(type,member) );})
-
 #define hlist_entry(ptr, type, member) container_of(ptr,type,member)
 
 /* 依次查找链表 */
