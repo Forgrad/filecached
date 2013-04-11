@@ -2,7 +2,7 @@
  * Created: 2013/3/24
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/9 20：00
+ * Last modified: 2013/4/11 22：00
  * Version: 0.1
  * File: src/common/hashtable.h
  * Breif: 哈希表数据结构头文件，线程安全由外部调用者考虑。

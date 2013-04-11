@@ -2,7 +2,7 @@
  * Created: 2013/4/11
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/11 16:24
+ * Last modified: 2013/4/11 22:00
  * Version: 0.1
  * File: src/masternode/request.c
  * Breif: Source file for request handling mechanism.

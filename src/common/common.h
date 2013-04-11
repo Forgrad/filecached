@@ -2,7 +2,7 @@
  * Created: 2013/4/2
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/9 15：00
+ * Last modified: 2013/4/11 22：00
  * Version: 0.1
  * File: src/common/common.h
  * Breif: 一些公用数据结构头文件。

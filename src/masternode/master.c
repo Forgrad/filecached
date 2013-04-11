@@ -2,7 +2,7 @@
  * Created: 2013/4/4
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/10 21：00
+ * Last modified: 2013/4/11 22：00
  * Version: 0.1
  * File: src/master/master.c
  * Breif: master节点主进程及相关函数代码。
