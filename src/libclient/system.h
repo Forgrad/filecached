@@ -30,3 +30,5 @@ int clean_dmf_slave(int flag);
 
 /* 关闭slave节点，释放资源 */
 int shutdown_dmf_slave(void);
+
+#endif

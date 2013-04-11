@@ -2,10 +2,10 @@
  * Created: 2013/3/24
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/6 23：00
+ * Last modified: 2013/4/9 20：00
  * Version: 0.1
  * File: src/common/hashtable.h
- * Breif: 哈希表数据结构头文件。
+ * Breif: 哈希表数据结构头文件，线程安全由外部调用者考虑。
  **************************************************/
 
 #ifndef HASHTABLE_HEADER
@@ -34,11 +34,10 @@ struct hash_node {
     struct hash_node name = HASH_NODE_INIT(string)
 #define INIT_HASH_NODE(ptr, string) do { strcpy((ptr)->str, string); INIT_HLIST_NODE(&(ptr)->list);} \
     while (0)
-#define HASH_TABLE(name) struct hlist_head name[HASH_SLOTS] = {}
+#define HASH_TABLE(name) struct hlist_head name[HASH_SLOTS] = {};
 
 /* 哈希表指针为指向hlist_head的指针 */
 typedef struct hlist_head *hashtable_ptr;
-
 
 /* 从字符串得到哈希值 */
 static inline int
@@ -67,7 +66,7 @@ hash_get(const char *path, const struct hlist_head *head)
 
 /* 哈希表遍历 */
 static inline int
-for_each_hash_entry(hashtable_ptr head, int (* func)(struct hash_node *))
+for_each_hash_entry(hashtable_ptr head, int (* func)(struct hash_node *, void *param), void *param)
 {
     struct hash_node *tpos;
     struct hlist_node *pos;
@@ -75,7 +74,7 @@ for_each_hash_entry(hashtable_ptr head, int (* func)(struct hash_node *))
     int i;
     for (i = 0; i < HASH_SLOTS; i++) {
         hlist_for_each_entry(tpos, pos, &head[i], list) {
-            ret = func(tpos);
+            ret = func(tpos, param);
             if (ret != 0) return ret;
         }
     }
@@ -100,7 +99,6 @@ hash_del(const char *path, struct hlist_head *head)
 /* 如果插入成功，返回该节点地址 */
 /* 如果因为key存在而插入失败，则返回存在的key的地址 */
 /* 其他原因返回NULL */
-/* !!!!需要信号量保护，待实现 */
 static inline struct hash_node*
 hash_insert(struct hash_node *node, struct hlist_head *head)
 {

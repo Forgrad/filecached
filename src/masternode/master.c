@@ -2,9 +2,9 @@
  * Created: 2013/4/4
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/7 10：00
+ * Last modified: 2013/4/10 21：00
  * Version: 0.1
- * File: src/master/master_main.c
+ * File: src/master/master.c
  * Breif: master节点主进程及相关函数代码。
  **************************************************/
 
@@ -16,16 +16,24 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
+#include <mpi.h>
 
 #include "../common/hashtable.h"
 #include "../common/common.h"
 #include "../common/constants.h"
 #include "../common/log.h"
+#include "../libclient/system.h"
+#include "../common/request.h"
 
-static int slave_num = 0;
-static struct slave_info slaves[MAX_SLAVES] = {};
-static HASH_TABLE(share_files);
 
+static int slave_num = 0;       /* 初始slave数量 */
+static struct slave_info slaves[MAX_SLAVES] = {}; /* slave信息数组 */
+static pthread_mutex_t lock_slaves = PTHREAD_MUTEX_INITIALIZER; /* slave数组的互斥锁 */
+static HASH_TABLE(share_files); /* 共享文件哈希表 */
+static pthread_mutex_t lock_share_files = PTHREAD_MUTEX_INITIALIZER; /* 共享文件哈希表的互斥锁 */
+static pthread_cond_t slaves_complete_cond = PTHREAD_COND_INITIALIZER;
+static pthread_t tid[MASTER_THREAD_NUM] = {};
 
 /* 系统初始化时调用此函数载入共享文件 */
 static int
@@ -137,14 +145,14 @@ fill_block(struct block *block, size_t offset, size_t size, int block_id, int sl
 }
 
 /* 请求slave载入数据块，待实现 */
-int
+static int
 block_load_req(char *file, struct block *block)
 {
     return 0;
 }
 
 /* 分配文件的存储位置 */
-int
+static int
 distribute_file(char *file, struct stat *statbuf)
 {
     if (!file || !statbuf) {
@@ -178,11 +186,11 @@ distribute_file(char *file, struct stat *statbuf)
         LOG_MSG("IN FUNC distribute: ERROR: file hash failed\n");
         return -5;
     }
-    LOG_MSG("IN FUNC distribure: file %s load success!\n", file_node->hnode.str);
+    LOG_MSG("IN FUNC distribute: file %s load success!\n", file_node->hnode.str);
     return 0;
 }
 
-
+/* 载入文件信息，并分发文件 */
 static inline int
 load_file(char *file)
 {
@@ -195,33 +203,169 @@ load_file(char *file)
     return distribute_file(file, &statbuf);
 }
 
+/* 打印共享文件信息 */
 static inline int
-list_share_file(struct hash_node *node)
+list_share_file(struct hash_node *node, void *count)
 {
     struct share_file *file = hash_entry(node, struct share_file, hnode);
     printf("file name: %s\n", file->hnode.str);
-    printf("file size: %u\n", file->size);
+    printf("file size: %lu\n", file->size);
     printf("file block num: %d\n", file->block_num);
-    printf("block size: %u\n", file->blocks[0].size);
-    printf("block offset: %u\n", file->blocks[0].offset);
+    printf("block size: %lu\n", file->blocks[0].size);
+    printf("block offset: %lu\n", file->blocks[0].offset);
     printf("block loc: slave %d\n", file->blocks[0].slave_id);
+    (*((int *)count))++;
     return 0;
 }
 
+/* 列出所有共享文件 */
+static inline int
+list_share_files(void)
+{
+    unsigned int file_num = 0;
+    int ret;
+    ret = for_each_hash_entry(share_files, list_share_file, &file_num);
+    printf("--------total files: %d-------\n", ret ? -1 : file_num);
+    return 0;
+}
+
+/* 列出slave节点信息 */
 static inline int
 list_slave_status(void)
 {
-    printf("\nslave num: %d\n", slave_num);
+    printf("\n--------slave num: %d--------", slave_num);
     int i;
     for (i = 0; i < slave_num; i++) {
-        printf("slave: %d :\n", i);
+        printf("\nslave: %d :\n", i);
         printf("is alive: %d\n", slaves[i].alive);
         printf("free: %lu bytes\n", slaves[i].free);
-        printf("last update: %lu\n", slaves[i].last_update);
+        printf("last update: %s\n", ctime(&slaves[i].last_update));
     }
     return 0;
 }
 
+/* 向slave节点分发共享文件元数据表 */
+static int
+distribute_share_files_map(void)
+{
+    return 0;
+}
+
+static int
+update_slave_info(struct slave_info_req *slave)
+{
+    slaves[slave->id].id = slave->id;
+    slaves[slave->id].alive = slave->alive;
+    slaves[slave->id].free = slave->free;
+    slaves[slave->id].last_update = time(NULL);
+    slaves[slave->id].connections = slave->connections;
+    return 0;
+}
+
+static int
+handle_slave_report(struct request *request, MPI_Status *status)
+{
+    struct slave_info_req slave;
+    MPI_Datatype mpi_slave_info_type;
+    MPI_Status stat;
+    build_mpi_type_slave_info(&slave, &mpi_slave_info_type);
+    MPI_Recv(&slave, 1, mpi_slave_info_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD, &stat);
+    update_slave_info(&slave);
+    return 0;
+}
+
+static int
+handle_file_open(struct request *request, MPI_Status *status)
+{
+    char file_name[MAX_PATH_LENGTH];
+    MPI_Status stat;
+    MPI_Recv(&file_name, MAX_PATH_LENGTH, MPI_CHAR, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD, &stat);
+    MPI_Datatype mpi_share_file_type;
+    build_mpi_type_share_file(0, &mpi_share_file_type);
+    struct hash_node *hnode = hash_get(file_name, share_files);
+    struct share_file_req file_req = {
+        .block_num = -1
+    };
+    if (hnode) {
+        struct share_file *file = hash_entry(hnode, struct share_file, hnode);
+        strcpy(file_req.name, file_name);
+        file_req.size = file->size;
+        file_req.block_num = file->block_num;
+        memcpy(file_req.blocks, file->blocks, sizeof(file_req.blocks));
+    }
+    MPI_Send(&file_req, 1, mpi_share_file_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
+}
+
+static request_handler request_handlers[MAX_REQUEST_TYPES] = {
+    handle_slave_report
+};
+
+
+/* master节点请求监听线程 */
+static void *
+master_listen_thread(void *param)
+{
+    struct request request;
+    MPI_Datatype mpi_requst_type;
+    MPI_Status status;
+    build_mpi_type_request(&request, &mpi_requst_type);
+    while (1) {
+    MPI_Recv(&request, 1, mpi_requst_type, MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &status);
+    MPI_Send(&request, 1, mpi_requst_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
+    request_handlers[request.request](&request, &status);
+    }
+    return (void *)0;
+}
+
+/* master主服务线程 */
+static void *
+master_main_thread(void *param)
+{
+    int i, ret;
+    for (i = 1; i < MASTER_THREAD_NUM; i++) {
+        ret = pthread_create(&tid[i], NULL, master_listen_thread, (void *)i);
+     }
+    if (ret != 0) {
+        return (void *)ret;
+    }
+    pthread_exit((void *)0);
+}
+
+
+/* 启动master主线程，完成相关初始化。 */
+int
+init_dmf_master(int slaves, char *files, \
+                unsigned long mem_size, \
+                unsigned long file_size)
+{
+    LOG_MSG("IN FUNC init_dmf_master: INFO: master initializeing!\n");
+    int ret;
+    ret = pthread_create(&tid[0], NULL, master_main_thread, NULL);
+    if (ret != 0) {
+        LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to init master threads!\n");
+        return ret;
+    }
+    pthread_mutex_lock(&lock_slaves);
+    while (slave_num != slaves) {
+        pthread_cond_wait(&slaves_complete_cond, &lock_slaves);
+    }
+    pthread_mutex_unlock(&lock_slaves);
+    ret = load_files(files, load_file);
+    if (ret != 0) {
+        LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to load files!\n");
+        return ret;
+    }
+    ret = distribute_share_files_map();
+    if (ret != 0) {
+        LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to distribute file maps!\n");
+    }
+    list_share_files();
+    list_slave_status();
+    return ret;
+}
+
+
+/* 用作测试 */
 int
 main(int argc, char **argv)
 {
@@ -230,12 +374,18 @@ main(int argc, char **argv)
         return -1;
     }
     slaves[0].alive = 1;
-    slaves[0].free = 900000ul;
+    slaves[0].free = 1000000000ul;
     slaves[1].alive = 1;
-    slaves[1].free = 1000000ul;
+    slaves[1].free = 1000000000ul;
     slave_num = 2;
-    load_files(argv[1], load_file);
-    printf("travel ret: %d\n", for_each_hash_entry(share_files, list_share_file));
+    int load_ret;
+    load_ret = load_files(argv[1], load_file);
+
+    if (load_ret < 0) {
+        printf("ERROR: Load failed!\n");
+        return load_ret;
+    }
+    list_share_files();
     list_slave_status();
 }
 
