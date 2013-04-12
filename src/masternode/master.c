@@ -2,7 +2,7 @@
  * Created: 2013/4/4
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/11 22：00
+ * Last modified: 2013/4/12 20：00
  * Version: 0.1
  * File: src/master/master.c
  * Breif: master节点主进程及相关函数代码。
@@ -254,11 +254,20 @@ distribute_share_files_map(void)
 static int
 update_slave_info(struct slave_info_req *slave)
 {
+    pthread_mutex_lock(&lock_slaves);
+    if (slaves[slave->id].alive == 0 && slave->alive == 1) {
+        slave_num++;
+        pthread_cond_signal(&slaves_complete_cond);
+    }
+    if (slaves[slaves->id].alive == 1 && slave->alive == 0) {
+        slave_num--;
+    }
     slaves[slave->id].id = slave->id;
     slaves[slave->id].alive = slave->alive;
     slaves[slave->id].free = slave->free;
     slaves[slave->id].last_update = time(NULL);
     slaves[slave->id].connections = slave->connections;
+    pthread_mutex_unlock(&lock_slaves);
     return 0;
 }
 
@@ -328,7 +337,11 @@ master_main_thread(void *param)
     if (ret != 0) {
         return (void *)ret;
     }
-    pthread_exit((void *)0);
+    for (i = 1; i < MASTER_THREAD_NUM; i++) {
+        ret = pthread_join(tid[i], NULL);
+    }
+    close_logger(MASTER_THREAD_NUM);
+    return (void *)ret;
 }
 
 
@@ -338,8 +351,13 @@ init_dmf_master(int slaves, char *files, \
                 unsigned long mem_size, \
                 unsigned long file_size)
 {
-    LOG_MSG("IN FUNC init_dmf_master: INFO: master initializeing!\n");
     int ret;
+    ret = init_logger("../dmf_log/master/", MASTER_THREAD_NUM);
+    if (ret != 0 || pthread_setspecific(log_id, MAX_THREAD_NUM)) {
+        printf("IN FUN init_dmf_master: ERROR: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n");
+        return ret;
+    }
+    LOG_MSG("IN FUNC init_dmf_master: INFO: master initializing!\n");
     ret = pthread_create(&tid[0], NULL, master_main_thread, NULL);
     if (ret != 0) {
         LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to init master threads!\n");
