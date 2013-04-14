@@ -289,8 +289,8 @@ distribute_share_files_map(void)
 {
     MPI_Status stat;
     MPI_Datatype mpi_share_file_type;
-    build_mpi_type_share_file(0, &mpi_share_file_type);
-    struct share_file_req file_req;
+    struct share_file file_req;
+    build_mpi_type_share_file(&file_req, &mpi_share_file_type);
     char buf[PACK_BUFF_SIZE];
     int position = 0;
     int file_num = share_file_num;
@@ -299,7 +299,7 @@ distribute_share_files_map(void)
 }
 
 static int
-update_slave_info(struct slave_info_req *slave)
+update_slave_info(struct slave_info *slave)
 {
     pthread_mutex_lock(&lock_slaves);
     if (slaves[slave->id].alive == 0 && slave->alive == 1) {
@@ -322,7 +322,7 @@ update_slave_info(struct slave_info_req *slave)
 static int
 handle_slave_report(struct request *request, MPI_Status *status)
 {
-    struct slave_info_req slave;
+    struct slave_info slave;
     MPI_Datatype mpi_slave_info_type;
     MPI_Status stat;
     
@@ -351,7 +351,7 @@ handle_file_open(struct request *request, MPI_Status *status)
     struct hash_node *hnode = hash_get(file_name, share_files);
     pthread_mutex_unlock(&lock_share_files);
 
-    struct share_file_req file_req = {
+    struct share_file file_req = {
         .block_num = -1
     };
 
@@ -360,13 +360,10 @@ handle_file_open(struct request *request, MPI_Status *status)
 
     if (hnode) {
         struct share_file *file = hash_entry(hnode, struct share_file, hnode);
-        strcpy(file_req.name, file_name);
-        file_req.size = file->size;
-        file_req.block_num = file->block_num;
-        memcpy(file_req.blocks, file->blocks, sizeof(file_req.blocks));
+        MPI_Send(&file, 1, mpi_share_file_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
+    }else {
+        MPI_Send(&file_req, 1, mpi_share_file_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
     }
-
-    MPI_Send(&file_req, 1, mpi_share_file_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
 }
 
 static request_handler request_handlers[MAX_REQUEST_TYPES] = {
@@ -472,11 +469,11 @@ main(int argc, char **argv)
     int size;
     MPI_Datatype mpi_share_file_type;
     MPI_Init(&argc, &argv);
-    struct share_file_req share_file;
+    struct share_file share_file;
     build_mpi_type_share_file(&share_file, &mpi_share_file_type);
     MPI_Pack_size(1, mpi_share_file_type, MPI_COMM_WORLD, &size);
-    printf("size of share_file_req packed: %d\n", size);
-    printf("size of share_file_req: %d\n", sizeof(struct share_file_req));
+    printf("size of share_file packed: %d\n", size);
+    printf("size of share_file: %d\n", sizeof(struct share_file));
     printf("size of unsigned long: %d\n", sizeof(unsigned long));
     MPI_Finalize();
 }

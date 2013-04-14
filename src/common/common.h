@@ -22,15 +22,6 @@ struct block
     unsigned long offset;              /* 块第一字节数据所在文件内偏移 */
 };
 
-/* 请求处理用块结构，目前与struct block结构一致 */
-struct block_req
-{
-    int slave_id;
-    int block_id;
-    unsigned long size;
-    unsigned long offset;
-};
-
 /* 共享文件信息结构体 */
 struct share_file
 {
@@ -38,14 +29,6 @@ struct share_file
     unsigned long size;                /* 文件大小 */
     struct block blocks[MAX_BLOCKS]; /* 文件块信息数组 */
     int block_num;                  /* 文件块数量 */
-};
-
-/* 请求处理用共享文件信息数据结构 */
-struct share_file_req {
-    char name[MAX_PATH_LENGTH];
-    unsigned long size;
-    struct block_req blocks[MAX_BLOCKS];
-    int block_num;
 };
 
 /* 私有文件信息结构体 */
@@ -67,15 +50,6 @@ struct slave_info
     unsigned long connections;  /* 数据传输连接情况 */
  };
 
-/* 请求处理所用到的slave信息数据结构，目前与slave_info一致 */
-struct slave_info_req
-{
-    int id;
-    int alive;
-    unsigned long free;
-    unsigned long last_update;
-    unsigned long connections;
-};
 #endif
 
 

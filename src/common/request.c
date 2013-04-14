@@ -15,7 +15,7 @@
 
 
 
-/* 对于struct request可以直接发送MPI_INT*2 */
+/* MPI对应的struct request类型 */
 void
 build_mpi_type_request(struct request *input, MPI_Datatype *mpitype)
 {
@@ -42,7 +42,7 @@ build_mpi_type_request(struct request *input, MPI_Datatype *mpitype)
 
 /* MPI对应的struct slave_info_req类型 */
 void
-build_mpi_type_slave_info(struct slave_info_req *input, MPI_Datatype *mpitype)
+build_mpi_type_slave_info(struct slave_info *input, MPI_Datatype *mpitype)
 {
     int block_lengths[2];
     MPI_Aint displacements[2];
@@ -67,7 +67,7 @@ build_mpi_type_slave_info(struct slave_info_req *input, MPI_Datatype *mpitype)
 
 /* MPI对应的struct block_req类型 */
 void
-build_mpi_type_block(struct block_req *input, MPI_Datatype *mpitype)
+build_mpi_type_block(struct block *input, MPI_Datatype *mpitype)
 {
     int block_lengths[2];
     MPI_Aint displacements[2];
@@ -92,7 +92,7 @@ build_mpi_type_block(struct block_req *input, MPI_Datatype *mpitype)
 
 /* MPI对应的struct share_file_req类型 */
 void
-build_mpi_type_share_file(struct share_file_req *input, MPI_Datatype *mpitype)
+build_mpi_type_share_file(struct share_file *input, MPI_Datatype *mpitype)
 {
     int block_lengths[4];
     MPI_Aint displacements[4];
@@ -100,7 +100,7 @@ build_mpi_type_share_file(struct share_file_req *input, MPI_Datatype *mpitype)
     MPI_Datatype typelist[4];
 
     MPI_Datatype mpi_block_type;
-    struct block_req block;
+    struct block block;
     build_mpi_type_block(&block, &mpi_block_type);
     
     
@@ -114,9 +114,9 @@ build_mpi_type_share_file(struct share_file_req *input, MPI_Datatype *mpitype)
     block_lengths[3] = 1;
 
     MPI_Get_address(input, &addresses[0]);
-    MPI_Get_address(input->name, &addresses[1]);
+    MPI_Get_address(&input->hnode.str, &addresses[1]);
     MPI_Get_address(&input->size, &addresses[2]);
-    MPI_Get_address(input->blocks, &addresses[3]);
+    MPI_Get_address(&input->blocks, &addresses[3]);
     MPI_Get_address(&input->block_num, &addresses[4]);
     displacements[0] = addresses[1] - addresses[0];
     displacements[1] = addresses[2] - addresses[1];
@@ -127,4 +127,3 @@ build_mpi_type_share_file(struct share_file_req *input, MPI_Datatype *mpitype)
 
     MPI_Type_commit(mpitype);
 }
-
