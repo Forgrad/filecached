@@ -29,9 +29,9 @@ build_mpi_type_request(struct request *input, MPI_Datatype *mpitype)
 
     block_lengths[0] = block_lengths[1] = 1;
 
-    MPI_Address(input, &addresses[0]);
-    MPI_Address(&input->request, &addresses[1]);
-    MPI_Address(&input->tag, &addresses[2]);
+    MPI_Get_address(input, &addresses[0]);
+    MPI_Get_address(&input->request, &addresses[1]);
+    MPI_Get_address(&input->tag, &addresses[2]);
     displacements[0] = addresses[1] - addresses[0];
     displacements[1] = addresses[2] - addresses[1];
 
@@ -54,9 +54,9 @@ build_mpi_type_slave_info(struct slave_info_req *input, MPI_Datatype *mpitype)
     block_lengths[0] = 2;
     block_lengths[1] = 3;
 
-    MPI_Address(input, &addresses[0]);
-    MPI_Address(&input->id, &addresses[1]);
-    MPI_Address(&input->free, &addresses[2]);
+    MPI_Get_address(input, &addresses[0]);
+    MPI_Get_address(&input->id, &addresses[1]);
+    MPI_Get_address(&input->free, &addresses[2]);
     displacements[0] = addresses[1] - addresses[0];
     displacements[1] = addresses[2] - addresses[1];
         
@@ -79,9 +79,9 @@ build_mpi_type_block(struct block_req *input, MPI_Datatype *mpitype)
     block_lengths[0] = 2;
     block_lengths[1] = 2;
 
-    MPI_Address(input, &addresses[0]);
-    MPI_Address(&input->slave_id, &addresses[1]);
-    MPI_Address(&input->size, &addresses[2]);
+    MPI_Get_address(input, &addresses[0]);
+    MPI_Get_address(&input->slave_id, &addresses[1]);
+    MPI_Get_address(&input->size, &addresses[2]);
     displacements[0] = addresses[1] - addresses[0];
     displacements[1] = addresses[2] - addresses[1];
         
@@ -113,11 +113,11 @@ build_mpi_type_share_file(struct share_file_req *input, MPI_Datatype *mpitype)
     block_lengths[2] = MAX_BLOCKS;
     block_lengths[3] = 1;
 
-    MPI_Address(input, &addresses[0]);
-    MPI_Address(&input->name, &addresses[1]);
-    MPI_Address(&input->size, &addresses[2]);
-    MPI_Address(&input->blocks, &addresses[3]);
-    MPI_Address(&input->block_num, &addresses[4]);
+    MPI_Get_address(input, &addresses[0]);
+    MPI_Get_address(input->name, &addresses[1]);
+    MPI_Get_address(&input->size, &addresses[2]);
+    MPI_Get_address(input->blocks, &addresses[3]);
+    MPI_Get_address(&input->block_num, &addresses[4]);
     displacements[0] = addresses[1] - addresses[0];
     displacements[1] = addresses[2] - addresses[1];
     displacements[2] = addresses[3] - addresses[2];

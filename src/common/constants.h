@@ -20,6 +20,7 @@
 #define MAX_THREAD_NUM 5
 #define REQUEST_TAG 32767
 #define MAX_REQUEST_TYPES 20
+#define PACK_BUFF_SIZE 4096
 
 #endif
 

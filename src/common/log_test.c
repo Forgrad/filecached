@@ -1,3 +1,13 @@
+/**************************************************
+ * Created: 2013/4/12
+ * Author: Leo_xy
+ * Email: xy198781@sina.com
+ * Last modified: 2013/4/12 20：00
+ * Version: 0.1
+ * File: src/common/log_test.c
+ * Breif: log功能测试代码。
+ **************************************************/
+
 #include <stdio.h>
 #include <pthread.h>
 
