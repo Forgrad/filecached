@@ -2,7 +2,7 @@
  * Created: 2013/4/12
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/12 12：00
+ * Last modified: 2013/4/15 20：00
  * Version: 0.1
  * File: src/common/log.c
  * Breif: 日志信息代码。
@@ -64,6 +64,7 @@ close_logger(int thread_num)
             ret = fclose(log_file[i]);
         }
     }
+    pthread_key_delete(log_id);
     return ret;
 }
 

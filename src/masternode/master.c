@@ -2,7 +2,7 @@
  * Created: 2013/4/4
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/12 20：00
+ * Last modified: 2013/4/15 21：00
  * Version: 0.1
  * File: src/master/master.c
  * Breif: master节点主进程及相关函数代码。
@@ -28,7 +28,7 @@
 
 
 static int slave_num = 0;       /* 初始slave数量 */
-static struct slave_info slaves[MAX_SLAVES] = {}; /* slave信息数组 */
+static struct slave_info slaves[MAX_SLAVES + 1] = {}; /* slave信息数组， slave进程从1开始编号 */
 static pthread_mutex_t lock_slaves = PTHREAD_MUTEX_INITIALIZER; /* slave数组的互斥锁 */
 static HASH_TABLE(share_files); /* 共享文件哈希表 */
 static unsigned long share_file_num = 0; /* 哈希表项数 */
@@ -44,13 +44,13 @@ load_files(const char *fullpath, int (*func)(char *))
     char *ptr;
     struct dirent *dirp;
     DIR *dp;
-    static char path[MAX_PATH_LENGTH];
+    static char path[MAX_PATH_LENGTH]; /* 路径名的本地缓冲 */
     int ret;
-    int outer = 0;
-    static int through = 0;
-    static int file_loaded = 0;
+    int outer = 0;              /* 指示本次执行是否递归中最外层调用 */
+    static int through = 0;     /* 指示函数是否被调用过 */
+    static int file_loaded = 0; /* 已经载入的文件数量 */
 
-    if (through == 0) {         /* 最外层调用时将路径复制 */
+    if (through == 0) {         /* 最外层调用时将路径复制到本地缓冲 */
         through = 1;
         outer = 1;
         strcpy(path, fullpath);
@@ -101,20 +101,23 @@ load_files(const char *fullpath, int (*func)(char *))
 
     if (outer == 1) {
         LOG_MSG("IN FUNC loadfiles：INFO: file loaded: %d\n", file_loaded);
+        through = 0;
     }
 
     return ret;
 }
 
-/* 初始化share_file节点 */
+/* 为文件分配share_file节点 */
 static inline struct share_file*
 init_share_file_node(char* file, struct stat *statbuf)
 {
+    /* 申请存储空间 */
     struct share_file *file_node = (struct share_file *)malloc(sizeof(struct share_file));
     if (!file_node) {
         return NULL;
     }
 
+    /* 初始化 */
     INIT_HASH_NODE(&file_node->hnode, file);
     file_node->size = statbuf->st_size;
     file_node->block_num = 0;
@@ -131,7 +134,7 @@ choose_slave(size_t size)
     int i;
 
     pthread_mutex_lock(&lock_slaves);
-    for (i = 0; i < slave_num; i++) {
+    for (i = 1; i <= slave_num; i++) {
         if (slaves[i].alive && slaves[i].free > free_space && slaves[i].free >= size) {
             slave = i;
             free_space = slaves[i].free;
@@ -158,6 +161,9 @@ fill_block(struct block *block, size_t offset, size_t size, int block_id, int sl
 static int
 block_load_req(char *file, struct block *block)
 {
+    struct request request;
+    MPI_Datatype mpi_request_type;
+    build_mpi_type_request(&request, &mpi_request_type);
     return 0;
 }
 
@@ -180,25 +186,28 @@ distribute_file(char *file, struct stat *statbuf)
     int slave;
     slave = choose_slave(file_node->size);
     if (slave < 0) {
-        LOG_MSG("IN FUNC distribute_file: ERROR: no propriate slave\n");
+        LOG_MSG("IN FUNC distribute_file: ERROR: no propriate slave!\n");
         return -3;
     }
 
     /* 载入文件不分块 */
     int req_ret;
+    LOG_MSG("IN FUNC distribute_file: INFO: request slave %d to load file %s!\n", slave, file_node->hnode.str);
     req_ret = block_load_req(file_node->hnode.str, fill_block(&file_node->blocks[0], 0, file_node->size, 1, slave));
     if (req_ret) {
-        LOG_MSG("IN FUNC distribute_file: ERROR: block load request failed\n");
+        LOG_MSG("IN FUNC distribute_file: ERROR: block load request failed!\n");
         return -4;
     }
 
+    LOG_MSG("IN FUNC distribute_file: INFO: slave %d loaded file %s\n", slave, file_node->hnode.str);
     file_node->block_num = 1;
 
     pthread_mutex_lock(&lock_slaves);
     slaves[slave].free -= file_node->size;
     slaves[slave].last_update = time(NULL);
     pthread_mutex_unlock(&lock_slaves);
-
+    LOG_MSG("IN FUNC distribute_file: INFO: slave %d status updated!\n", slave);
+    
     pthread_mutex_lock(&lock_share_files);
     if (&file_node->hnode != hash_insert(&file_node->hnode, share_files)) {
         LOG_MSG("IN FUNC distribute: ERROR: file hash failed\n");
@@ -207,7 +216,7 @@ distribute_file(char *file, struct stat *statbuf)
     }
     share_file_num++;
     pthread_mutex_unlock(&lock_share_files);
-
+    
     LOG_MSG("IN FUNC distribute: INFO: file %s load success!\n", file_node->hnode.str);
 
     return 0;
@@ -272,7 +281,7 @@ list_slave_status(void)
     int i;
 
     pthread_mutex_lock(&lock_slaves);
-    for (i = 0; i < slave_num; i++) {
+    for (i = 1; i <= slave_num; i++) {
         printf("\nslave: %d :\n", i);
         printf("is alive: %d\n", slaves[i].alive);
         printf("free: %lu bytes\n", slaves[i].free);
@@ -283,6 +292,7 @@ list_slave_status(void)
     return 0;
 }
 
+/* 将文件节点包装入传输缓冲区 */
 int
 pack_share_file(struct hash_node *node, void *input)
 {
@@ -303,12 +313,18 @@ distribute_share_files_map(void)
     struct share_file file_req;
     build_mpi_type_share_file(&file_req, &param.mpi_share_file_type);
     int file_num = share_file_num;
+
+    LOG_MSG("IN FUNC distribute_share_files_map: INFO: packing share files info!");
     MPI_Pack_size(share_file_num, param.mpi_share_file_type, MPI_COMM_WORLD, &param.size);
     param.buff = (char *)malloc(param.size);
     param.position = 0;
+
+    pthread_mutex_lock(&lock_share_files);
     for_each_hash_entry(share_files, pack_share_file, &param);
+    pthread_mutex_unlock(&lock_share_files);
 
     /* Broadcast不能用Probe接收，因此依次发送。。。 */
+    LOG_MSG("IN FUNC distribute_share_files_map: INFO: sending share files info!");
     int i;
     for (i = 1; i <= slave_num;) {
         if (MPI_Send(param.buff, param.position, MPI_PACKED, i, SHARE_FILE_DIS_TAG, MPI_COMM_WORLD) == 0) {
@@ -316,10 +332,14 @@ distribute_share_files_map(void)
         }
     }
     free(param.buff);
+
+    LOG_MSG("IN FUNC distribute_share_files_map: INFO: share files info sended!");
     
     return 0;
 }
 
+
+/* 更新节点信息 */
 static int
 update_slave_info(struct slave_info *slave)
 {
@@ -341,6 +361,29 @@ update_slave_info(struct slave_info *slave)
     return 0;
 }
 
+/* 处理节点信息汇报，一次消息模式 */
+static int
+handle_slave_report_one_message(struct request *request, MPI_Status *status,
+                                void *buff, int buff_size, int *position, MPI_Datatype *request_type) {
+    struct slave_info slave;
+    MPI_Datatype mpi_slave_info_type;
+    MPI_Status stat;
+    
+    build_mpi_type_slave_info(&slave, &mpi_slave_info_type);
+
+    LOG_MSG("IN FUNC handle_slave_report: INFO: receiving slave info report!\n");
+    MPI_Unpack(buff, buff_size, position, &slave, 1, mpi_slave_info_type, MPI_COMM_WORLD);
+    LOG_MSG("IN FUNC handle_slave_report: INFO: slave info received!\n");
+    
+    update_slave_info(&slave);
+    LOG_MSG("IN FUNC handle_slave_report: INFO: slave info updated!\n");
+
+    MPI_Send(request, 1, *request_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
+
+    return 0;
+}
+
+/* 处理节点信息汇报，多次消息模式 */
 static int
 handle_slave_report(struct request *request, MPI_Status *status)
 {
@@ -360,7 +403,7 @@ handle_slave_report(struct request *request, MPI_Status *status)
     return 0;
 }
 
-/* 由于每个slave节点有本地保存文件元数据，这个调用不会使用了 */
+/* 由于每个slave节点有本地保存文件元数据，这个函数不会使用了 */
 static int
 handle_file_open(struct request *request, MPI_Status *status)
 {
@@ -392,20 +435,35 @@ static request_handler request_handlers[MAX_REQUEST_TYPES] = {
     handle_slave_report
 };
 
+static request_handler_one_message request_handlers_one_message[MAX_REQUEST_TYPES] = {
+    handle_slave_report_one_message
+};
 
 /* master节点请求监听线程，多次消息传递的消息处理模型 */
 static void *
 master_listen_thread(void *param)
 {
+    /* 构造request类型 */
     struct request request;
-    MPI_Datatype mpi_requst_type;
+    MPI_Datatype mpi_request_type;
     MPI_Status status;
-    build_mpi_type_request(&request, &mpi_requst_type);
+    build_mpi_type_request(&request, &mpi_request_type);
+
+    /* 设置log id */
+    pthread_setspecific(log_id, param);
+
+    /* 请求处理循环 */
     while (1) {
-    MPI_Recv(&request, 1, mpi_requst_type, MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &status);
-    MPI_Send(&request, 1, mpi_requst_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
+    MPI_Recv(&request, 1, mpi_request_type, MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &status);
+    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (int)param, request.request, request.tag);
+    MPI_Send(&request, 1, mpi_request_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
+    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d ack sent!", (int)param, request.request, request.tag);
     request_handlers[request.request](&request, &status);
+    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (int)param, request.request, request.tag);
+    MPI_Send(&request, 1, mpi_request_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
+    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d finished!", (int)param, request.request, request.tag);
     }
+
     return (void *)0;
 }
 
@@ -413,6 +471,33 @@ master_listen_thread(void *param)
 static void *
 master_listen_thread_one_message(void *param)
 {
+    /* 构造request类型 */
+    struct request request;
+    MPI_Datatype mpi_request_type;    
+    build_mpi_type_request(&request, &mpi_request_type);
+
+    /* 设置log id */
+    pthread_setspecific(log_id, param);
+
+    /* 试探消息长度 */
+    int buff_size;
+    MPI_Status status;
+    MPI_Message message;
+    MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &status);
+    MPI_Get_count(&status, MPI_PACKED, &buff_size);
+
+    /* 请求处理循环 */
+    while (1) {
+        char buff[buff_size];
+        int position = 0;
+        MPI_Mrecv(buff, buff_size, MPI_PACKED, &message, &status);
+        MPI_Unpack(buff, buff_size, &position, &request, 1, mpi_request_type, MPI_COMM_WORLD);
+        LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (int)param, request.request, request.tag);
+        request_handlers_one_message[request.request](&request, &status, buff, buff_size, &position, &mpi_request_type);
+        LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (int)param, request.request, request.tag);
+        MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &status);
+        MPI_Get_count(&status, MPI_PACKED, &buff_size);
+    }
     return (void *)0;
 }
 
@@ -421,15 +506,26 @@ static void *
 master_main_thread(void *param)
 {
     int i, ret;
+
+    /* 设置log id */
+    pthread_setspecific(log_id, param);
+
+    /* 创建监听线程 */
+    LOG_MSG("IN MASTER THREAD %d: INFO: creating listenning threads!\n", (int)param);
     for (i = 1; i < MASTER_THREAD_NUM; i++) {
         ret = pthread_create(&tid[i], NULL, master_listen_thread, (void *)i);
      }
     if (ret != 0) {
         return (void *)ret;
     }
+    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads created!\n", (int)param);
+
+    /* 等待监听线程结束 */
     for (i = 1; i < MASTER_THREAD_NUM; i++) {
         ret = pthread_join(tid[i], NULL);
     }
+    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads stopped!\n", (int)param);
+
     close_logger(MASTER_THREAD_NUM);
     return (void *)ret;
 }
@@ -513,6 +609,12 @@ main(int argc, char **argv)
         MPI_Pack(&rank, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD);
         MPI_Pack(&size, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD);
         MPI_Send(buf, position, MPI_PACKED, 1, 0, MPI_COMM_WORLD);
+        int i = 1;
+        while (i < 100) {
+            char b[i];
+            printf("size of b[i]: %d\n", sizeof(b));
+            i++;
+        }
         /* MPI_Bcast(buf, position, MPI_PACKED, 0, MPI_COMM_WORLD); */
     } else {
         MPI_Status status;

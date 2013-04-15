@@ -18,7 +18,7 @@
 
 enum request_type {
     SLAVE_REPORT = 0,
-    
+    LOAD_BLOCK
 };
 
 struct request
@@ -29,6 +29,7 @@ struct request
 
 typedef int (* request_handler)(struct request *, MPI_Status *);
 
+typedef int (* request_handler_one_message)(struct request *, MPI_Status *, void *, int, int *, MPI_Datatype *);
 
 /* 对于struct request可以直接发送MPI_INT*2 */
 void
