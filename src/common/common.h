@@ -49,6 +49,14 @@ struct slave_info
     unsigned long last_update;  /* 信息上次更新时间 */
     unsigned long connections;  /* 数据传输连接情况 */
  };
+/* MPI包装share_files时传递的参数 */
+struct pack_param
+{
+    MPI_Datatype mpi_share_file_type;
+    char *buff;
+    int position;
+    int size;
+};
 
 #endif
 

@@ -21,6 +21,7 @@
 #define REQUEST_TAG 32767
 #define MAX_REQUEST_TYPES 20
 #define PACK_BUFF_SIZE 4096
+#define SHARE_FILE_DIS_TAG 32766
 
 #endif
 

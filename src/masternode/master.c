@@ -283,18 +283,40 @@ list_slave_status(void)
     return 0;
 }
 
+int
+pack_share_file(struct hash_node *node, void *input)
+{
+    struct pack_param *param = input;
+    struct share_file *file = hash_entry(node, struct share_file, hnode);
+
+    MPI_Pack(file, 1, param->mpi_share_file_type, param->buff, param->size, &param->position, MPI_COMM_WORLD);
+
+    return 0;
+}
+
 /* 向slave节点分发共享文件元数据表 */
 static int
 distribute_share_files_map(void)
 {
     MPI_Status stat;
-    MPI_Datatype mpi_share_file_type;
+    struct pack_param param;
     struct share_file file_req;
-    build_mpi_type_share_file(&file_req, &mpi_share_file_type);
-    char buf[PACK_BUFF_SIZE];
-    int position = 0;
+    build_mpi_type_share_file(&file_req, &param.mpi_share_file_type);
     int file_num = share_file_num;
-    /* MPI_PACK() */
+    MPI_Pack_size(share_file_num, param.mpi_share_file_type, MPI_COMM_WORLD, &param.size);
+    param.buff = (char *)malloc(param.size);
+    param.position = 0;
+    for_each_hash_entry(share_files, pack_share_file, &param);
+
+    /* Broadcast不能用Probe接收，因此依次发送。。。 */
+    int i;
+    for (i = 1; i <= slave_num;) {
+        if (MPI_Send(param.buff, param.position, MPI_PACKED, i, SHARE_FILE_DIS_TAG, MPI_COMM_WORLD) == 0) {
+            i++;
+        }
+    }
+    free(param.buff);
+    
     return 0;
 }
 
@@ -371,7 +393,7 @@ static request_handler request_handlers[MAX_REQUEST_TYPES] = {
 };
 
 
-/* master节点请求监听线程 */
+/* master节点请求监听线程，多次消息传递的消息处理模型 */
 static void *
 master_listen_thread(void *param)
 {
@@ -384,6 +406,13 @@ master_listen_thread(void *param)
     MPI_Send(&request, 1, mpi_requst_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
     request_handlers[request.request](&request, &status);
     }
+    return (void *)0;
+}
+
+/* 一次消息传递的请求处理模型 */
+static void *
+master_listen_thread_one_message(void *param)
+{
     return (void *)0;
 }
 
@@ -475,6 +504,25 @@ main(int argc, char **argv)
     printf("size of share_file packed: %d\n", size);
     printf("size of share_file: %d\n", sizeof(struct share_file));
     printf("size of unsigned long: %d\n", sizeof(unsigned long));
+    int rank;
+    int position = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0)
+    {
+        char buf[1000];
+        MPI_Pack(&rank, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD);
+        MPI_Pack(&size, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD);
+        MPI_Send(buf, position, MPI_PACKED, 1, 0, MPI_COMM_WORLD);
+        /* MPI_Bcast(buf, position, MPI_PACKED, 0, MPI_COMM_WORLD); */
+    } else {
+        MPI_Status status;
+        MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
+        int count;
+        MPI_Get_count(&status, MPI_INT, &count);
+        printf("MPI_INT received: %d\n", count);
+        MPI_Get_count(&status, MPI_PACKED, &count);
+        printf("MPI_PACKED received: %d\n", count);
+    }
     MPI_Finalize();
 }
 
