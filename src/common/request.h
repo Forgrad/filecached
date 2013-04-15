@@ -2,7 +2,7 @@
  * Created: 2013/3/24
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/3/24 9:24
+ * Last modified: 2013/4/15 22:00
  * Version: 0.1
  * File: src/masternode/request.h
  * Breif: Header for request handling mechanism.
@@ -27,9 +27,7 @@ struct request
     int tag;
 };
 
-typedef int (* request_handler)(struct request *, MPI_Status *);
-
-typedef int (* request_handler_one_message)(struct request *, MPI_Status *, void *, int, int *, MPI_Datatype *);
+typedef int (* request_handler)(struct request *, MPI_Status *, void *, int, int *, MPI_Datatype *);
 
 /* 对于struct request可以直接发送MPI_INT*2 */
 void

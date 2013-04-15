@@ -2,7 +2,7 @@
  * Created: 2013/4/4
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/15 21：00
+ * Last modified: 2013/4/15 22：00
  * Version: 0.1
  * File: src/master/master.c
  * Breif: master节点主进程及相关函数代码。
@@ -361,10 +361,11 @@ update_slave_info(struct slave_info *slave)
     return 0;
 }
 
-/* 处理节点信息汇报，一次消息模式 */
+/* 处理节点信息汇报 */
 static int
-handle_slave_report_one_message(struct request *request, MPI_Status *status,
-                                void *buff, int buff_size, int *position, MPI_Datatype *request_type) {
+handle_slave_report(struct request *request, MPI_Status *status, void *buff,
+                    int buff_size, int *position, MPI_Datatype *request_type)
+{
     struct slave_info slave;
     MPI_Datatype mpi_slave_info_type;
     MPI_Status stat;
@@ -383,93 +384,13 @@ handle_slave_report_one_message(struct request *request, MPI_Status *status,
     return 0;
 }
 
-/* 处理节点信息汇报，多次消息模式 */
-static int
-handle_slave_report(struct request *request, MPI_Status *status)
-{
-    struct slave_info slave;
-    MPI_Datatype mpi_slave_info_type;
-    MPI_Status stat;
-    
-    build_mpi_type_slave_info(&slave, &mpi_slave_info_type);
-    
-    LOG_MSG("IN FUNC handle_slave_report: INFO: receiving slave info report!\n");
-    MPI_Recv(&slave, 1, mpi_slave_info_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD, &stat);
-    LOG_MSG("IN FUNC handle_slave_report: INFO: slave info received!\n");
-    
-    update_slave_info(&slave);
-    LOG_MSG("IN FUNC handle_slave_report: INFO: slave info updated!\n");
-    
-    return 0;
-}
-
-/* 由于每个slave节点有本地保存文件元数据，这个函数不会使用了 */
-static int
-handle_file_open(struct request *request, MPI_Status *status)
-{
-    char file_name[MAX_PATH_LENGTH];
-    MPI_Status stat;
-
-    MPI_Recv(&file_name, MAX_PATH_LENGTH, MPI_CHAR, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD, &stat);
-
-    pthread_mutex_lock(&lock_share_files);
-    struct hash_node *hnode = hash_get(file_name, share_files);
-    pthread_mutex_unlock(&lock_share_files);
-
-    struct share_file file_req = {
-        .block_num = -1
-    };
-
-    MPI_Datatype mpi_share_file_type;
-    build_mpi_type_share_file(&file_req, &mpi_share_file_type);
-
-    if (hnode) {
-        struct share_file *file = hash_entry(hnode, struct share_file, hnode);
-        MPI_Send(&file, 1, mpi_share_file_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
-    }else {
-        MPI_Send(&file_req, 1, mpi_share_file_type, status->MPI_SOURCE, request->tag, MPI_COMM_WORLD);
-    }
-}
-
 static request_handler request_handlers[MAX_REQUEST_TYPES] = {
     handle_slave_report
 };
 
-static request_handler_one_message request_handlers_one_message[MAX_REQUEST_TYPES] = {
-    handle_slave_report_one_message
-};
-
-/* master节点请求监听线程，多次消息传递的消息处理模型 */
-static void *
-master_listen_thread(void *param)
-{
-    /* 构造request类型 */
-    struct request request;
-    MPI_Datatype mpi_request_type;
-    MPI_Status status;
-    build_mpi_type_request(&request, &mpi_request_type);
-
-    /* 设置log id */
-    pthread_setspecific(log_id, param);
-
-    /* 请求处理循环 */
-    while (1) {
-    MPI_Recv(&request, 1, mpi_request_type, MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &status);
-    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (int)param, request.request, request.tag);
-    MPI_Send(&request, 1, mpi_request_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
-    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d ack sent!", (int)param, request.request, request.tag);
-    request_handlers[request.request](&request, &status);
-    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (int)param, request.request, request.tag);
-    MPI_Send(&request, 1, mpi_request_type, status.MPI_SOURCE, request.tag, MPI_COMM_WORLD);
-    LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d finished!", (int)param, request.request, request.tag);
-    }
-
-    return (void *)0;
-}
-
 /* 一次消息传递的请求处理模型 */
 static void *
-master_listen_thread_one_message(void *param)
+master_listen_thread(void *param)
 {
     /* 构造request类型 */
     struct request request;
@@ -493,7 +414,7 @@ master_listen_thread_one_message(void *param)
         MPI_Mrecv(buff, buff_size, MPI_PACKED, &message, &status);
         MPI_Unpack(buff, buff_size, &position, &request, 1, mpi_request_type, MPI_COMM_WORLD);
         LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (int)param, request.request, request.tag);
-        request_handlers_one_message[request.request](&request, &status, buff, buff_size, &position, &mpi_request_type);
+        request_handlers[request.request](&request, &status, buff, buff_size, &position, &mpi_request_type);
         LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (int)param, request.request, request.tag);
         MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &status);
         MPI_Get_count(&status, MPI_PACKED, &buff_size);
