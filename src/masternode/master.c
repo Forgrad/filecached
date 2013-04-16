@@ -2,7 +2,7 @@
  * Created: 2013/4/4
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/15 22：00
+ * Last modified: 2013/4/16 16：00
  * Version: 0.1
  * File: src/master/master.c
  * Breif: master节点主进程及相关函数代码。
@@ -25,6 +25,7 @@
 #include "../common/log.h"
 #include "../libclient/system.h"
 #include "../common/request.h"
+#include "../common/tag.h"
 
 
 static int slave_num = 0;       /* 初始slave数量 */
@@ -35,8 +36,8 @@ static unsigned long share_file_num = 0; /* 哈希表项数 */
 static pthread_mutex_t lock_share_files = PTHREAD_MUTEX_INITIALIZER; /* 共享文件哈希表的互斥锁 */
 static pthread_cond_t slaves_complete_cond = PTHREAD_COND_INITIALIZER; /* 节点注册完成条件变量 */
 static pthread_t tid[MASTER_THREAD_NUM] = {}; /* master线程tid */
-static unsigned long request_base_tag = REQUEST_BASE_TAG;
-static char tags[REQUEST_TAG_NUM] = {};
+static tag_pool tags = {};
+static pthread_mutex_t lock_tags = PTHREAD_MUTEX_INITIALIZER;
 
 /* 系统初始化时调用此函数载入共享文件 */
 static int
@@ -159,15 +160,55 @@ fill_block(struct block *block, size_t offset, size_t size, int block_id, int sl
     return block;
 }
 
-/* 请求slave载入数据块，待实现 */
+/* 请求slave载入数据块 */
 static int
 block_load_req(char *file, struct block *block)
 {
     struct request request;
     MPI_Datatype mpi_request_type;
     build_mpi_type_request(&request, &mpi_request_type);
+
+    MPI_Datatype mpi_block_type;
+    build_mpi_type_block(block, &mpi_block_type);
+
+    int tag = get_tag(tags, &lock_tags);
+    LOG_MSG("IN FUNC block_load_req: INFO: get tag  %d for block load request!\n", tag);
+    request.request = BLOCK_LOAD_REQ;
+    request.tag = tag;
+    int size = 0, sum_size = 0;
+    MPI_Pack_size(1, mpi_request_type, MPI_COMM_WORLD, &size);
+    sum_size += size;
+    MPI_Pack_size(MAX_PATH_LENGTH, MPI_CHAR, MPI_COMM_WORLD, &size);
+    sum_size += size;
+    MPI_Pack_size(1, mpi_block_type, MPI_COMM_WORLD, &size);
+    sum_size += size;
+    char buff[sum_size];
+    int position = 0;
+    MPI_Pack(&request, 1, mpi_request_type, buff, sum_size, &position, MPI_COMM_WORLD);
+    MPI_Pack(file, MAX_PATH_LENGTH, MPI_CHAR, buff, sum_size, &position, MPI_COMM_WORLD);
+    MPI_Pack(&request, 1, mpi_request_type, buff, sum_size, &position, MPI_COMM_WORLD);
+
+    MPI_Send(buff, position, MPI_PACKED, block->slave_id, tag, MPI_COMM_WORLD);
+    LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s load request sent to slave %d!\n", block->block_id, file, block->slave_id);
+    struct request ack;
+    MPI_Status status;
+    int ret = 0;
+
+    MPI_Recv(&ack, 1, mpi_request_type, block->slave_id, tag, MPI_COMM_WORLD, &status);
+    if (ack.request == request.request && ack.tag == request.tag) {
+        LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s loaded at slave %d!\n", block->block_id, file, block->slave_id);
+    } else {
+        LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s loading at slave %d failed!\n", block->block_id, file, block->slave_id);
+        ret = -1;
+    }
     
-    return 0;
+    
+    if (release_tag(tags, tag, &lock_tags) != 0) {
+        LOG_MSG("IN FUNC block_load_req: ERROR: tag %d release error!\n", tag);
+        ret = -2;
+    }
+    
+    return ret;
 }
 
 /* 分配文件的存储位置 */
@@ -196,7 +237,7 @@ distribute_file(char *file, struct stat *statbuf)
     /* 载入文件不分块 */
     int req_ret;
     LOG_MSG("IN FUNC distribute_file: INFO: request slave %d to load file %s!\n", slave, file_node->hnode.str);
-    req_ret = block_load_req(file_node->hnode.str, fill_block(&file_node->blocks[0], 0, file_node->size, 1, slave));
+    req_ret = block_load_req(file_node->hnode.str, fill_block(&file_node->blocks[0], 0, file_node->size, 0, slave));
     if (req_ret) {
         LOG_MSG("IN FUNC distribute_file: ERROR: block load request failed!\n");
         return -4;
@@ -501,6 +542,8 @@ main(int argc, char **argv)
         printf("usage: %s pathname\n", argv[0]);
         return -1;
     }
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     slaves[0].alive = 1;
     slaves[0].free = 1000000000ul;
     slaves[1].alive = 1;
@@ -517,7 +560,6 @@ main(int argc, char **argv)
     list_slave_status();
     int size;
     MPI_Datatype mpi_share_file_type;
-    MPI_Init(&argc, &argv);
     struct share_file share_file;
     build_mpi_type_share_file(&share_file, &mpi_share_file_type);
     MPI_Pack_size(1, mpi_share_file_type, MPI_COMM_WORLD, &size);

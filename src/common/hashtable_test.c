@@ -33,7 +33,7 @@ main(void)
             j /= 10;
         }
         j = i;
-        char *string = (char *)malloc(pow + 1);
+        char string[pow + 1];
         string[pow--] = '\0';
         while (pow >= 0) {
             string[pow--] = '0' + (j % 10);
@@ -46,7 +46,6 @@ main(void)
             printf("%s insert failed \n", node->hnode.str);
             exit(1);
         }
-        free(string);
         i++;
     }
     getchar();
@@ -59,7 +58,7 @@ main(void)
             j /= 10;
         }
         j = i;
-        char *string = (char *)malloc(pow + 1);
+        char string[pow + 1];
         string[pow--] = '\0';
         while (pow >= 0) {
             string[pow--] = '0' + (j % 10);
@@ -68,7 +67,6 @@ main(void)
         struct string_num *node = hash_entry(hash_get(string, hashtable), struct string_num, hnode);
         if ( node->num == atoi(string) && !strcmp(string, node->hnode.str)) {
             printf("get \"%s\" success \n", string);
-            free(string);
         } else {
             printf("get failed\n");
             exit(1);

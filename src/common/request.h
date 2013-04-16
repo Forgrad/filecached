@@ -18,7 +18,7 @@
 
 enum request_type {
     SLAVE_REPORT = 0,
-    LOAD_BLOCK
+    BLOCK_LOAD_REQ
 };
 
 struct request
