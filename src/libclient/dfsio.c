@@ -11,39 +11,39 @@
 
 #include "dfsio.h"
 
-HASH_TABLE(share_hash);
 
 
 
-/*打开文件描述符，dmf_file,有该文件信息则返回对应的dmf_file,没有则返回NULL*/
 dmf_file* dmf_open(char filename[])
 { 
     struct hash_node *node;
-    node=hash_get(filename,share_hash);
+    node=hash_get(filename,share_files);/*在哈希表中获得filename对应的哈希节点*/
     if (NULL==node) return NULL;
-      dmf_file *file=malloc(sizeof(dmf_file));
-	    file->hnode=node;
-	    file->file_pos=0;
+	dmf_file *file=malloc(sizeof(dmf_file));
+	file->hnode=node;
+	file->file_pos=0;
     return file;
     
 }
 
 
+
+
 static ssize_t share_read(void *buf, size_t size, size_t count, dmf_file *file)
 {
-      share_node *node=hash_entry(file->hnode,share_node,hnode);
+      struct share_file *node=hash_entry(file->hnode,struct share_file,hnode);/*获取相应的存放共享数据信息的结构*/
       if (file->file_pos>=node->size ||file->file_pos+size*count>node->size)
 	  return -1;/*读取溢出的情况*/
-      int is_here=node->slave_id==getprocessid()?1:0;
+      int is_here=node->blocks[0].slave_id==getprocessid()?1:0;/*判断共享文件是否在本地*/
       ssize_t result;
       
       if (is_here) {
-	    result=mem_read(node->hnode.str,file->file_pos,size*count,buf);
+	    result=mem_read(node->hnode.str,file->file_pos,size*count,buf);/*在本地就本地接口调用读取*/
       } else {
-	    result=remote_read(node->hnode.str,node->slave_id,file->file_pos,size*count,buf);
+	    result=remote_read(node->hnode.str,node->blocks[0].slave_id,file->file_pos,size*count,buf);/*不在本地则远程接口调用读取*/
       }
       
-      if (-2==result ||-1==result) return -1;
+      if (-2==result ||-1==result) return -1;/*读取失败，可能是读取的数据量超出了已有文件的范围*/
       file->file_pos+=result;
       return result;
       
@@ -53,7 +53,7 @@ static ssize_t share_read(void *buf, size_t size, size_t count, dmf_file *file)
 
 
 
-/*返回真实读取的数据量大小，数据缓冲区或文件描述符为NULL或则读取的数据量大小超出了已经有的就则返回-1*/
+
 ssize_t dmf_read(void* buf, size_t size, size_t count, dmf_file* file)
 {
      if (NULL==buf || NULL==file) return -1;
@@ -61,25 +61,27 @@ ssize_t dmf_read(void* buf, size_t size, size_t count, dmf_file* file)
 }
 
 
-/*读取文件数据中一行的数据，成功则返回buf指针，失败则返回NULL*/
+
+
+
 char* dmf_gets(char* buf, size_t size, dmf_file* file)
 {
      if (NULL==file ||NULL==buf)return NULL;
-     share_node *node=hash_entry(file->hnode,share_node,hnode);
+     struct share_file *node=hash_entry(file->hnode,struct share_file,hnode);
      size_t file_have=node->size-file->file_pos;
      size_t realsize=size-1<=file_have?size-1:file_have;
      char temp[realsize];
      int result;
-     if (node->slave_id==getprocessid()) 
+     if (node->blocks[0].slave_id==getprocessid()) 
          result=mem_read(node->hnode.str,file->file_pos,realsize,temp);
      else 
-         result=remote_read(node->hnode.str,node->slave_id,file->file_pos,realsize,temp);
+         result=remote_read(node->hnode.str,node->blocks[0].slave_id,file->file_pos,realsize,temp);
      if (-1==result) return NULL;
      size_t cpy_size;
      for (cpy_size=0;cpy_size<realsize;cpy_size++)
-         if ('\n'==temp[cpy_size]) break;
+         if ('\n'==temp[cpy_size]) break;/*判断字符串中是否有\n*/
      memcpy(buf,temp,cpy_size);
-     if (cpy_size<realsize) buf[cpy_size++]='\n';
+     if (cpy_size<realsize) buf[cpy_size++]='\n';/*添加\n到buf末尾*/
      buf[cpy_size]='\0';
      file->file_pos+=cpy_size;
      return buf;
@@ -88,17 +90,17 @@ char* dmf_gets(char* buf, size_t size, dmf_file* file)
 
 
 
-/*关闭一个文件流，释放文件指针*/
+
 int dmf_close(dmf_file* file)
 {
      if (NULL!=file) free(file);
      return 1;
 }
 
-/*判断是否到文件的末尾了，到则返回1，否则返回0*/
+
 int dmf_eof(dmf_file* file)
 {
-     share_node *s_node=hash_entry(file->hnode,share_node,hnode);
+     struct share_file *s_node=hash_entry(file->hnode,struct share_file,hnode);
      size_t size=s_node->size;
      return (file->file_pos>=size)?1:0;
 }
@@ -109,10 +111,10 @@ int dmf_seek(dmf_file* file, size_t offset, int whence)
 {
     int result=0;
     ssize_t where;
-    share_node *s_node=hash_entry(file->hnode,share_node,hnode);
+    struct share_file *s_node=hash_entry(file->hnode,struct share_file,hnode);
     size_t size=s_node->size;
     switch (whence) {
-      case SEEK_CUR:
+      case SEEK_CUR:/*文件指针当前位置*/
 	 where=file->file_pos+offset;
 	if (where<0 || where>size) {
 	  result=-1;
@@ -120,14 +122,14 @@ int dmf_seek(dmf_file* file, size_t offset, int whence)
 	}
 	file->file_pos+=offset;
         break;
-      case SEEK_SET:
+      case SEEK_SET:/*文件开头*/
 	if (offset<0 || offset>size) {
 	  result=-1;
 	  break;
 	}
 	file->file_pos=offset;
 	break;
-      case SEEK_END:
+      case SEEK_END:/*文件结尾，可读字符的下一位*/
 	 where=size+offset;
 	if (where<0 || where>size) {
 	  result=-1;
@@ -147,7 +149,13 @@ size_t dmf_tell(dmf_file* file)
 }
 
 
-char getprocessid(void )
+/*本来应该调用mpi的接口来获取本地的slave_id,这里方便本地测试就直接返回1即可*/
+int getprocessid(void )
 {
-     return 'h';
+     return 1;
+}
+
+ssize_t remote_read(char filenameblkid[], int slave_id, size_t pos, size_t size, void* buf)
+{
+     return 1;
 }

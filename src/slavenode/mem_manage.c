@@ -2,7 +2,7 @@
  * Created: 2013/4/2
  * Author: star_liu
  * Email: 327177726@qq.com
- * Last modified: 2013/4/15
+ * Last modified:
  * Version: 0.1
  * File:  src/slavenode/mem_manage.c
  * Breif:  内存管理接口api
@@ -40,7 +40,7 @@ int mem_malloc(managememory *manager, char filename[], size_t size)
      INIT_HASH_NODE(&node->hnode,filename);
      if (hash_insert(&node->hnode,mem_hash) != &node->hnode) {
           free(node);
-    return -1;
+       return -1;
      }
      
      int isfull=0;
@@ -84,13 +84,14 @@ ssize_t mem_read(char filename[], size_t pos, size_t size, void* buf)
 }
 
 
-/*向目标内存地址写入数据，写入数据量不等于原有分配的数据大小则返回-1，成功写入则返回写入的数据量大小*/
+/*向目标内存地址写入数据，写入数据量大于了原有分配的数据大小则返回-1，成功写入则返回写入的数据量大小
+ 这里是一次性的载入，不会有后续的追加操作*/
 ssize_t mem_write(char filename[], size_t size, void* buf)
 {
      struct hash_node *node=hash_get(filename,mem_hash);
      mem_node *m_node=hash_entry(node,mem_node,hnode);
      size_t mem_size=m_node->size;
-     if (size!=mem_size) return -1;
+     if (size>mem_size) return -1;
      memcpy(m_node->startpos,buf,size);
      m_node->iswritting=0;
      return size;
