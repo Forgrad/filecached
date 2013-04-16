@@ -35,6 +35,8 @@ static unsigned long share_file_num = 0; /* 哈希表项数 */
 static pthread_mutex_t lock_share_files = PTHREAD_MUTEX_INITIALIZER; /* 共享文件哈希表的互斥锁 */
 static pthread_cond_t slaves_complete_cond = PTHREAD_COND_INITIALIZER; /* 节点注册完成条件变量 */
 static pthread_t tid[MASTER_THREAD_NUM] = {}; /* master线程tid */
+static unsigned long request_base_tag = REQUEST_BASE_TAG;
+static char tags[REQUEST_TAG_NUM] = {};
 
 /* 系统初始化时调用此函数载入共享文件 */
 static int
@@ -164,6 +166,7 @@ block_load_req(char *file, struct block *block)
     struct request request;
     MPI_Datatype mpi_request_type;
     build_mpi_type_request(&request, &mpi_request_type);
+    
     return 0;
 }
 
