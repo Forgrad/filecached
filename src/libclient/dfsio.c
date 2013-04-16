@@ -43,6 +43,7 @@ static ssize_t share_read(void *buf, size_t size, size_t count, dmf_file *file)
 	    result=remote_read(node->hnode.str,node->slave_id,file->file_pos,size*count,buf);
       }
       
+      
       if (-2==result ||-1==result) return -1;
       file->file_pos+=result;
       return result;
