@@ -24,7 +24,10 @@ int mem_init(managememory *manager, size_t size)
 {
      manager->start=malloc(size);
      if (NULL==manager->start) return -1;
-     if (-1==mlock(manager->start,size))return -1;
+     if (-1==mlock(manager->start,size)) {
+          free(manager->start);
+          return -1;
+     }
      manager->mem_pos=manager->start;
      manager->freesize=size;
      manager->totalsize=size;
