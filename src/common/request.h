@@ -18,13 +18,23 @@
 
 enum request_type {
     SLAVE_REPORT = 0,
-    BLOCK_LOAD_REQ
+    BLOCK_LOAD_REQ,
+    REMOTE_READ   
 };
 
 struct request
 {
     enum request_type request;
     int tag;
+};
+
+/* MPI包装share_files时传递的参数 */
+struct pack_param
+{
+    MPI_Datatype mpi_share_file_type;
+    char *buff;
+    int position;
+    int size;
 };
 
 typedef int (* request_handler)(struct request *, MPI_Status *, void *, int, int *, MPI_Datatype *);
@@ -46,5 +56,3 @@ void
 build_mpi_type_share_file(struct share_file *, MPI_Datatype *);
 
 #endif
-
-

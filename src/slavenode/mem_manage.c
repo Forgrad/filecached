@@ -2,32 +2,32 @@
  * Created: 2013/4/2
  * Author: star_liu
  * Email: 327177726@qq.com
- * Last modified:
+ * Last modified: 2013/4/19 10:00
  * Version: 0.1
  * File:  src/slavenode/mem_manage.c
  * Breif:  内存管理接口api
  * ****************************/
 
-#include "mem_manage.h"
 #include <sys/mman.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "../common/hashtable.h"
+#include "mem_manage.h"
+#include "../common/common.h"
+
 
 /*用于记录单机内存数据信息位置的哈希表，静态全局变量*/
-static  HASH_TABLE(mem_hash);
-
+static HASH_TABLE(mem_hash);
 
 /*内存管理初始化api,成功初始化内存空间则返回0，失败则返回-1*/
-int mem_init(managememory *manager, size_t size)
+int
+mem_init(managememory *manager, size_t size)
 {
      manager->start=malloc(size);
      if (NULL==manager->start) return -1;
-     if (-1==mlock(manager->start,size)) {
-          free(manager->start);
-          return -1;
-     }
+     if (-1==mlock(manager->start,size))return -1;
      manager->mem_pos=manager->start;
      manager->freesize=size;
      manager->totalsize=size;
@@ -99,4 +99,22 @@ ssize_t mem_write(char filename[], size_t size, void* buf)
      m_node->iswritting=0;
      return size;
 
+}
+
+
+/*从外存读入数据 根据block给定的数据长度*/
+ssize_t
+mem_write_block(char filename[], struct block b)
+{
+	struct hash_node *node=hash_get(filename,mem_hash);
+	mem_node *m_node=hash_entry(node,mem_node,hnode);
+	size_t mem_size=m_node->size;
+	if (b.size>mem_size) return -1;
+	//memcpy(m_node->startpos,buf,size);
+
+	FILE * file = fopen(filename,"r");
+	mem_size = fread(m_node->startpos,1,b.size,file);
+	if(b.size != mem_size) return -1;
+	m_node->iswritting=0;
+	return 0;
 }

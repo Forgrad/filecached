@@ -34,7 +34,7 @@ struct hash_node {
     struct hash_node name = HASH_NODE_INIT(string)
 #define INIT_HASH_NODE(ptr, string) do { strcpy((ptr)->str, string); INIT_HLIST_NODE(&(ptr)->list);} \
     while (0)
-#define HASH_TABLE(name) struct hlist_head name[HASH_SLOTS] = {};
+#define HASH_TABLE(name) struct hlist_head name[HASH_SLOTS] = {}
 
 /* 哈希表指针为指向hlist_head的指针 */
 typedef struct hlist_head *hashtable_ptr;

@@ -2,7 +2,7 @@
  * Created: 2013/4/2
  * Author: star_liu
  * Email: 327177726@qq.com
- * Last modified:2013/4/15
+ * Last modified:2013/4/19 10:00
  * Version: 0.1
  * File: src/slavenode/mem_manage.h
  * Breif: Header for memory manager mechanism
@@ -15,24 +15,26 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+
 #include "../common/hashtable.h"
+#include "../common/common.h"
 
 typedef struct managememory 
 {
-     size_t totalsize;/*预取内存空间总大小*/                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
-     size_t freesize;/*剩余内存空间大小*/
-     void *start;/*初始化内存开始指针*/
-     void *mem_pos;/*当前移动到的指针位置*/
-     pthread_mutex_t mutex;/*互斥量，避免多线程同时对freesize进行修改访问*/
-}managememory;
+    size_t totalsize;/*预取内存空间总大小*/
+    size_t freesize;/*剩余内存空间大小*/
+    void *start;/*初始化内存开始指针*/
+    void *mem_pos;/*当前移动到的指针位置*/
+    pthread_mutex_t mutex;/*互斥量，避免多线程同时对freesize进行修改访问*/
+} managememory;
 
 typedef struct mem_node/*本内存管理中有一个hash表，mem_node是该表节点结构*/
 {
-     struct hash_node hnode;
-     void *startpos;
-     int iswritting;
-     size_t size;
-}mem_node;
+    struct hash_node hnode;
+    void *startpos;
+    int iswritting;
+    size_t size;
+} mem_node;
   
 /*在slave上初始化一块内存资源池，成功初始化返回0，失败则返回-1*/
 int
@@ -49,5 +51,9 @@ mem_read(char filename[], size_t pos, size_t size, void *buf);
 /*一次性写入共享数据，成功写入则返回写入的数据大小，写入的数据与之前分配的空间不匹配则写入失败返回-1*/
 ssize_t 
 mem_write(char filename[], size_t size, void *buf);
+
+/*从外存读入数据 根据block给定的数据长度*/
+ssize_t
+mem_write_block(char filename[], struct block b);
 
 #endif
