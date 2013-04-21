@@ -12,8 +12,7 @@
 #define DFSIO_H
 
 
-#include "../slavenode/mem_manage.h"
-#include "../common/common.h"
+#include "../common/hashtable.h"
 
 /*文件描述结构*/
 typedef struct dmf_file
@@ -22,21 +21,7 @@ typedef struct dmf_file
      size_t file_pos;/*文件访问操作偏移*/
 }dmf_file;
 
-/*共享数据元数据的存放hash表share_files*/
-extern struct hlist_head share_files[];
-
-/*获得本地slave_id*/
-int
-getprocessid(void);
-
-/*由徐越提供的远程数据传送接口，先暂定此结构*/
-ssize_t 
-remote_read(char filenameblkid[], int slave_id, size_t pos, size_t size, void *buf);
-
-
-
 /*以下都是上层应用所需要的接口api原型*/
-
 
 /*打开文件，如果成功打开则返回一个描述该文件的dmf_file指针，否则没有该文件则返回NULL*/
 dmf_file *

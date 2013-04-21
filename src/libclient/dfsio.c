@@ -148,13 +148,6 @@ size_t dmf_tell(dmf_file* file)
      return file->file_pos;
 }
 
-
-/*本来应该调用mpi的接口来获取本地的slave_id,这里方便本地测试就直接返回1即可*/
-int getprocessid(void )
-{
-     return 1;
-}
-
 ssize_t remote_read(char filenameblkid[], int slave_id, size_t pos, size_t size, void* buf)
 {
      return 1;

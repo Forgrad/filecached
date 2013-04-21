@@ -2,7 +2,7 @@
  * Created: 2013/4/2
  * Author: Leo_xy
  * Email: xy198781@sina.com
- * Last modified: 2013/4/11 22：00
+ * Last modified: 2013/4/20 22：00
  * Version: 0.1
  * File: src/common/common.h
  * Breif: 一些公用数据结构头文件。
@@ -49,6 +49,35 @@ struct slave_info
     unsigned long last_update;  /* 信息上次更新时间 */
     unsigned long connections;  /* 数据传输连接情况 */
  };
+
+/*调用mpi的接口来获取本地的process id*/
+static inline int
+get_process_id(void)
+{
+	int id;
+	MPI_Comm_rank(MPI_COMM_WORLD, &id);
+	return id;
+}
+
+/* 根据给定数字在字符串后面添加数字字符 */
+static inline char *
+strcatn(char *path, int n)
+{
+    char *ptr = path + strlen(path);
+    int pow = 1;
+    int j = n / 10;
+    while(j) {
+        pow++;
+        j /= 10;
+    }
+    j = n;
+    ptr[pow--] = '\0';
+    while (pow >= 0) {
+        ptr[pow--] = '0' + (j % 10);
+        j /= 10;
+    }
+    return path;
+}
 
 #endif
 

@@ -37,7 +37,17 @@ struct pack_param
     int size;
 };
 
-typedef int (* request_handler)(struct request *, MPI_Status *, void *, int, int *, MPI_Datatype *);
+struct handler_param
+{
+    MPI_Datatype mpi_request_type;
+    struct request request;
+    MPI_Status status;
+    char *buff;
+    int buff_size;
+    int position;
+};
+
+typedef int (* request_handler)(struct handler_param *);
 
 /* 对于struct request可以直接发送MPI_INT*2 */
 void
