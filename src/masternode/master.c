@@ -609,62 +609,62 @@ init_dmf_master(int slaves, char *files, \
 
 
 /* 用作测试 */
-int
-main(int argc, char **argv)
-{
-    if (argc != 2 ) {
-        printf("usage: %s pathname\n", argv[0]);
-        return -1;
-    }
-    int provided;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-    slaves[0].alive = 1;
-    slaves[0].free = 1000000000ul;
-    slaves[1].alive = 1;
-    slaves[1].free = 1000000000ul;
-    slave_num = 2;
-    int load_ret;
-    load_ret = load_files(argv[1], load_file);
+/* int */
+/* main(int argc, char **argv) */
+/* { */
+/*     if (argc != 2 ) { */
+/*         printf("usage: %s pathname\n", argv[0]); */
+/*         return -1; */
+/*     } */
+/*     int provided; */
+/*     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided); */
+/*     slaves[0].alive = 1; */
+/*     slaves[0].free = 1000000000ul; */
+/*     slaves[1].alive = 1; */
+/*     slaves[1].free = 1000000000ul; */
+/*     slave_num = 2; */
+/*     int load_ret; */
+/*     load_ret = load_files(argv[1], load_file); */
 
-    if (load_ret < 0) {
-        printf("ERROR: Load failed!\n");
-        return load_ret;
-    }
-    list_share_files();
-    list_slave_status();
-    int size;
-    MPI_Datatype mpi_share_file_type;
-    struct share_file share_file;
-    build_mpi_type_share_file(&share_file, &mpi_share_file_type);
-    MPI_Pack_size(1, mpi_share_file_type, MPI_COMM_WORLD, &size);
-    printf("size of share_file packed: %d\n", size);
-    printf("size of share_file: %d\n", sizeof(struct share_file));
-    printf("size of unsigned long: %d\n", sizeof(unsigned long));
-    int rank;
-    int position = 0;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0)
-    {
-        char buf[1000];
-        MPI_Pack(&rank, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD);
-        MPI_Pack(&size, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD);
-        MPI_Send(buf, position, MPI_PACKED, 1, 0, MPI_COMM_WORLD);
-        int i = 1;
-        while (i < 100) {
-            char b[i];
-            printf("size of b[i]: %d\n", sizeof(b));
-            i++;
-        }
-        /* MPI_Bcast(buf, position, MPI_PACKED, 0, MPI_COMM_WORLD); */
-    } else {
-        MPI_Status status;
-        MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
-        int count;
-        MPI_Get_count(&status, MPI_INT, &count);
-        printf("MPI_INT received: %d\n", count);
-        MPI_Get_count(&status, MPI_PACKED, &count);
-        printf("MPI_PACKED received: %d\n", count);
-    }
-    MPI_Finalize();
-}
+/*     if (load_ret < 0) { */
+/*         printf("ERROR: Load failed!\n"); */
+/*         return load_ret; */
+/*     } */
+/*     list_share_files(); */
+/*     list_slave_status(); */
+/*     int size; */
+/*     MPI_Datatype mpi_share_file_type; */
+/*     struct share_file share_file; */
+/*     build_mpi_type_share_file(&share_file, &mpi_share_file_type); */
+/*     MPI_Pack_size(1, mpi_share_file_type, MPI_COMM_WORLD, &size); */
+/*     printf("size of share_file packed: %d\n", size); */
+/*     printf("size of share_file: %d\n", sizeof(struct share_file)); */
+/*     printf("size of unsigned long: %d\n", sizeof(unsigned long)); */
+/*     int rank; */
+/*     int position = 0; */
+/*     MPI_Comm_rank(MPI_COMM_WORLD, &rank); */
+/*     if (rank == 0) */
+/*     { */
+/*         char buf[1000]; */
+/*         MPI_Pack(&rank, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD); */
+/*         MPI_Pack(&size, 1, MPI_INT, buf, 1000, &position, MPI_COMM_WORLD); */
+/*         MPI_Send(buf, position, MPI_PACKED, 1, 0, MPI_COMM_WORLD); */
+/*         int i = 1; */
+/*         while (i < 100) { */
+/*             char b[i]; */
+/*             printf("size of b[i]: %d\n", sizeof(b)); */
+/*             i++; */
+/*         } */
+/*         /\* MPI_Bcast(buf, position, MPI_PACKED, 0, MPI_COMM_WORLD); *\/ */
+/*     } else { */
+/*         MPI_Status status; */
+/*         MPI_Probe(0, 0, MPI_COMM_WORLD, &status); */
+/*         int count; */
+/*         MPI_Get_count(&status, MPI_INT, &count); */
+/*         printf("MPI_INT received: %d\n", count); */
+/*         MPI_Get_count(&status, MPI_PACKED, &count); */
+/*         printf("MPI_PACKED received: %d\n", count); */
+/*     } */
+/*     MPI_Finalize(); */
+/* } */
 
