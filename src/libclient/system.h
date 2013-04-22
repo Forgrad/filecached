@@ -23,7 +23,7 @@ int clean_dmf_master(int flag);
 int shutdown_dmf_master(void);
 
 /* slave节点主线程启动函数 */
-int init_dmf_slave(void);
+int init_dmf_slave(unsigned long mem);
 
 /* slave节点信息重置 */
 int clean_dmf_slave(int flag);

@@ -200,6 +200,7 @@ block_load_req(char *file, struct block *block)
     LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s load request sent to slave %d!\n", block->block_id, file, block->slave_id);
 
     /* 接收ack */
+    ret = 0;
     struct request ack;
     MPI_Status status;
     MPI_Recv(&ack, 1, mpi_request_type, block->slave_id, request.tag, MPI_COMM_WORLD, &status);

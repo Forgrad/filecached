@@ -10,6 +10,8 @@
 #ifndef COMMON_HEADER
 #define COMMON_HEADER
 
+#include <mpi.h>
+
 #include "hashtable.h"
 #include "constants.h"
 
