@@ -461,10 +461,10 @@ master_listen_thread(void *param)
     build_mpi_type_request(&handler_param.request, &handler_param.mpi_request_type);
 
     /* 设置log id */
-    int ret = 0;
-    ret = set_log_id((int)param);
+    ssize_t ret = 0;
+    ret = set_log_id((ssize_t)param);
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: slave failed to set log id!\n", (int)param);
+        LOG_MSG("IN MASTER THREAD %d: INFO: slave failed to set log id!\n", (ssize_t)param);
         return (void *)ret;
     }
 
@@ -472,7 +472,7 @@ master_listen_thread(void *param)
     MPI_Message message;
     MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &handler_param.status);
     MPI_Get_count(&handler_param.status, MPI_PACKED, &handler_param.buff_size);
-    LOG_MSG("IN MASTER THREAD %d: INFO: request message probed!\n", (int)param);
+    LOG_MSG("IN MASTER THREAD %d: INFO: request message probed!\n", (ssize_t)param);
     
     /* 请求处理循环 */
     while (1) {
@@ -482,28 +482,28 @@ master_listen_thread(void *param)
 
         /* 根据试探长度，接收消息 */
         MPI_Mrecv(handler_param.buff, handler_param.buff_size, MPI_PACKED, &message, &handler_param.status);
-        LOG_MSG("IN MASTER THREAD %d: INFO: request message received!\n", (int)param);
+        LOG_MSG("IN MASTER THREAD %d: INFO: request message received!\n", (ssize_t)param);
 
         /* 解包struct request结构体信息 */
         MPI_Unpack(handler_param.buff, handler_param.buff_size, &handler_param.position, &handler_param.request,
                    1, handler_param.mpi_request_type, MPI_COMM_WORLD);
-        LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (int)param, handler_param.request.request,
+        LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (ssize_t)param, handler_param.request.request,
                 handler_param.request.tag);
 
         /* 调用请求处理函数执行处理过程 */
         ret = request_handlers[handler_param.request.request](&handler_param);
         if (ret != 0) {
-            LOG_MSG("IN MASTER THREAD %d: ERROR: requst %d tag %d failed handling!", (int)param,
+            LOG_MSG("IN MASTER THREAD %d: ERROR: requst %d tag %d failed handling!", (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         } else {
-            LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (int)param,
+            LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         }
 
         /* 试探消息长度 */
         MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &handler_param.status);
         MPI_Get_count(&handler_param.status, MPI_PACKED, &handler_param.buff_size);
-        LOG_MSG("IN MASTER THREAD %d: INFO: request message probed!\n", (int)param);
+        LOG_MSG("IN MASTER THREAD %d: INFO: request message probed!\n", (ssize_t)param);
     }
     return (void *)0;
 }
@@ -512,41 +512,41 @@ master_listen_thread(void *param)
 static void *
 master_main_thread(void *param)
 {
-    int ret = 0;
+    ssize_t ret = 0;
 
     /* 设置log id */
-    ret = set_log_id((int) param);
+    ret = set_log_id((ssize_t) param);
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: failed to set log id!\n", (int)param);
+        LOG_MSG("IN MASTER THREAD %d: INFO: failed to set log id!\n", (ssize_t)param);
         return (void *)ret;
     }
 
     /* 创建监听线程 */
-    LOG_MSG("IN MASTER THREAD %d: INFO: creating listenning threads!\n", (int)param);
-    int i;
+    LOG_MSG("IN MASTER THREAD %d: INFO: creating listenning threads!\n", (ssize_t)param);
+    ssize_t i;
     for (i = 1; i < MASTER_THREAD_NUM; i++) {
         ret = pthread_create(&tid[i], NULL, master_listen_thread, (void *)i);
      }
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: listenning thread failed to be created!\n", (int)param);
+        LOG_MSG("IN MASTER THREAD %d: INFO: listenning thread failed to be created!\n", (ssize_t)param);
         return (void *)ret;
     }
-    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads created!\n", (int)param);
+    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads created!\n", (ssize_t)param);
 
     /* 等待监听线程结束 */
     for (i = 1; i < MASTER_THREAD_NUM; i++) {
         ret = pthread_join(tid[i], NULL);
         if (ret != 0) {
-            LOG_MSG("IN MASTER THREAD %d: INFO: listenning thread failed to be stopped!\n", (int)param);
+            LOG_MSG("IN MASTER THREAD %d: INFO: listenning thread failed to be stopped!\n", (ssize_t)param);
             return (void *)ret;
         }
     }
-    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads stopped!\n", (int)param);
+    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads stopped!\n", (ssize_t)param);
 
     /* 关闭日志文件 */
     ret = close_logger(MASTER_THREAD_NUM);
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: logger failed to be closed!\n", (int)param);
+        LOG_MSG("IN MASTER THREAD %d: INFO: logger failed to be closed!\n", (ssize_t)param);
     }
     return (void *)ret;
 }
@@ -558,7 +558,7 @@ init_dmf_master(int slaves, char *files, \
                 unsigned long mem_size, \
                 unsigned long file_size)
 {
-    int ret = 0;
+    ssize_t ret = 0;
 
     /* 初始化日志文件及线程日志编号 */
     ret = init_logger("./dmf_log/master/", MASTER_THREAD_NUM);

@@ -17,8 +17,8 @@ void *
 logmsg(void *param)
 {
     pthread_setspecific(log_id, param);
-    printf("lod id: %d\n", (int)pthread_getspecific(log_id));
-    LOG_MSG("thread: %d logging\n", (int)param);
+    printf("lod id: %d\n", (ssize_t)pthread_getspecific(log_id));
+    LOG_MSG("thread: %d logging\n", (ssize_t)param);
 }
 
 int
