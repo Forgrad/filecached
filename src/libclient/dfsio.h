@@ -17,8 +17,8 @@
 /*文件描述结构*/
 typedef struct dmf_file
 {
-     struct hash_node *hnode;/*共享或临时文件元数据挂载的hash节点指针*/
-     size_t file_pos;/*文件访问操作偏移*/
+    struct hash_node *hnode;/*共享或临时文件元数据挂载的hash节点指针*/
+    size_t file_pos;/*文件访问操作偏移*/
 }dmf_file;
 
 /*以下都是上层应用所需要的接口api原型*/

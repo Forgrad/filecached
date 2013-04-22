@@ -50,15 +50,15 @@ struct slave_info
     unsigned long free;      /* 节点剩余存储空间数量 */
     unsigned long last_update;  /* 信息上次更新时间 */
     unsigned long connections;  /* 数据传输连接情况 */
- };
+};
 
 /*调用mpi的接口来获取本地的process id*/
 static inline int
 get_process_id(void)
 {
-	int id;
-	MPI_Comm_rank(MPI_COMM_WORLD, &id);
-	return id;
+    int id;
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
+    return id;
 }
 
 /* 根据给定数字在字符串后面添加数字字符 */

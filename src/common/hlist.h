@@ -37,25 +37,25 @@ struct hlist_head
 static inline int
 hlist_unhashed(const struct hlist_node *h)
 {
-	return !h->pprev;
+    return !h->pprev;
 }
 
 /* 判断一个链表是否为空 */
 static inline int
 hlist_empty(const struct hlist_head *h)
 {
-	return !h->first;
+    return !h->first;
 }
 
 /* 从链表中删除节点 */
 static inline void
 hlist_del(struct hlist_node *n)
 {
-	struct hlist_node *next = n->next;
-	struct hlist_node **pprev = n->pprev;
-	*pprev = next;
-	if (next)
-		next->pprev = pprev;
+    struct hlist_node *next = n->next;
+    struct hlist_node **pprev = n->pprev;
+    *pprev = next;
+    if (next)
+        next->pprev = pprev;
     n->next = NULL;
     n->pprev = NULL;
 }
@@ -64,48 +64,48 @@ hlist_del(struct hlist_node *n)
 static inline void
 hlist_add_head(struct hlist_node *n, struct hlist_head *h)
 {
-	struct hlist_node *first = h->first;
-	n->next = first;
-	if (first)
-		first->pprev = &n->next;
-	h->first = n;
-	n->pprev = &h->first;
+    struct hlist_node *first = h->first;
+    n->next = first;
+    if (first)
+        first->pprev = &n->next;
+    h->first = n;
+    n->pprev = &h->first;
 }
 
 /* 将节点加入到next所指链表节点之前，next不能为空 */
 static inline void
 hlist_add_before(struct hlist_node *n,
-					struct hlist_node *next)
+                    struct hlist_node *next)
 {
-	n->pprev = next->pprev;
-	n->next = next;
-	next->pprev = &n->next;
-	*(n->pprev) = n;
+    n->pprev = next->pprev;
+    n->next = next;
+    next->pprev = &n->next;
+    *(n->pprev) = n;
 }
 
 /* 将节点加入到next所指节点之后，next不能为空 */
 static inline void
 hlist_add_after(struct hlist_node *n,
-					struct hlist_node *next)
+                    struct hlist_node *next)
 {
-	next->next = n->next;
-	n->next = next;
-	next->pprev = &n->next;
+    next->next = n->next;
+    n->next = next;
+    next->pprev = &n->next;
 
-	if(next->next)
-		next->next->pprev  = &next->next;
+    if(next->next)
+        next->next->pprev  = &next->next;
 }
 
 /* 得到包含链表元素的数据结构 */
-#define container_of(ptr, type, member) ({			\
-        const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
+#define container_of(ptr, type, member) ({          \
+        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)( (char *)__mptr - offsetof(type,member) );})
 #define hlist_entry(ptr, type, member) container_of(ptr,type,member)
 
 /* 依次查找链表 */
 #define hlist_for_each_entry(tpos, pos, head, member)  \
-	for (pos = (head)->first; \
-	     pos && ({ tpos = hlist_entry(pos, typeof(*tpos), member); 1;}); \
-	     pos = pos->next)
+    for (pos = (head)->first; \
+         pos && ({ tpos = hlist_entry(pos, typeof(*tpos), member); 1;}); \
+         pos = pos->next)
 
 #endif

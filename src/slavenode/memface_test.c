@@ -17,24 +17,24 @@ int main(void)
      while (file_i<=30) {
         char i[3]="";
   sprintf(i,"%d",file_i);
-	memcpy(filename+4,i,3);
-	int result=mem_malloc(&man,filename,FILE_SIZE);/*为filename在内存池分配FILE_SIZE大小的空间*/
-	if (-1==result) {
-	  printf("rename the file%d\n",file_i);
-	  file_i++;
-	  continue;/*申请的文件在内存池的hash表项中重名了*/
-	} else if (-2==result) {
-	  printf("memory is full for file%d\n",file_i);
-	  file_i++;
-	  continue;/*申请的文件空间大小超出了内存池子已有的剩余空间*/
-	}
-	
-	result=mem_write(filename,27,map);
-	if (-1==result)
-	  printf("file%d error write size\n",file_i);
-	else 
-	  printf("file%d write success\n",file_i);
-	file_i++;
+    memcpy(filename+4,i,3);
+    int result=mem_malloc(&man,filename,FILE_SIZE);/*为filename在内存池分配FILE_SIZE大小的空间*/
+    if (-1==result) {
+      printf("rename the file%d\n",file_i);
+      file_i++;
+      continue;/*申请的文件在内存池的hash表项中重名了*/
+    } else if (-2==result) {
+      printf("memory is full for file%d\n",file_i);
+      file_i++;
+      continue;/*申请的文件空间大小超出了内存池子已有的剩余空间*/
+    }
+    
+    result=mem_write(filename,27,map);
+    if (-1==result)
+      printf("file%d error write size\n",file_i);
+    else 
+      printf("file%d write success\n",file_i);
+    file_i++;
      }
      
      
@@ -44,17 +44,17 @@ int main(void)
      file_i=26;
      while (file_i>0) {
         char i[3]="";
-	sprintf(i,"%d",file_i);
+    sprintf(i,"%d",file_i);
         memcpy(filename+4,i,3);
-	int result=mem_read(filename,file_i,1,read_buf);/*读取指定位置的指定文件的数据*/
-	if (-1==result) {/*不存在该数据返回-1*/
-	  printf("file%d is not exist\n",file_i);
-	  file_i--;
-	  continue;
-	} else {
-	  printf("file%d is :%s\n",file_i,read_buf);
-	}
-	file_i--;
+    int result=mem_read(filename,file_i,1,read_buf);/*读取指定位置的指定文件的数据*/
+    if (-1==result) {/*不存在该数据返回-1*/
+      printf("file%d is not exist\n",file_i);
+      file_i--;
+      continue;
+    } else {
+      printf("file%d is :%s\n",file_i,read_buf);
+    }
+    file_i--;
      }
      
      return 0;

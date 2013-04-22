@@ -20,35 +20,35 @@ int main(void)
      while (file_i<=20) {
         char i[3]="";
   sprintf(i,"%d",file_i);
-	memcpy(filename+4,i,3);
-	struct share_file *file_node=malloc(sizeof(struct share_file));
-	INIT_HASH_NODE(&file_node->hnode,filename);
-	hash_insert(&file_node->hnode,share_files);
-	mem_malloc(&manager,filename,FILE_SIZE);
-	mem_write(filename,27,map);
-	file_node->size=FILE_SIZE;
-	file_node->block_num=1;
-	file_node->blocks[0].slave_id=1;
-	file_node->blocks[0].size=FILE_SIZE;
-	file_i++;
+    memcpy(filename+4,i,3);
+    struct share_file *file_node=malloc(sizeof(struct share_file));
+    INIT_HASH_NODE(&file_node->hnode,filename);
+    hash_insert(&file_node->hnode,share_files);
+    mem_malloc(&manager,filename,FILE_SIZE);
+    mem_write(filename,27,map);
+    file_node->size=FILE_SIZE;
+    file_node->block_num=1;
+    file_node->blocks[0].slave_id=1;
+    file_node->blocks[0].size=FILE_SIZE;
+    file_i++;
      }
      /*读取相应的文件数据信息并显示*/
      file_i=1;
      char read_buf[27];
      while (file_i<=40) {
         char i[3]="";
-	sprintf(i,"%d",file_i);
-	memcpy(filename+4,i,3);
-	dmf_file *file=dmf_open(filename);
-	if (NULL==file) {
-	  printf("file%d is not exist\n",file_i);
-	  file_i++;
-	  continue;
-	}
-	dmf_read(read_buf,sizeof(char),27,file);
-	printf("file%d is: %s\n",file_i,read_buf);
-	dmf_close(file);
-	file_i++;
+    sprintf(i,"%d",file_i);
+    memcpy(filename+4,i,3);
+    dmf_file *file=dmf_open(filename);
+    if (NULL==file) {
+      printf("file%d is not exist\n",file_i);
+      file_i++;
+      continue;
+    }
+    dmf_read(read_buf,sizeof(char),27,file);
+    printf("file%d is: %s\n",file_i,read_buf);
+    dmf_close(file);
+    file_i++;
      }
      
      /*使用seek定位，依次读取文件‘1’中的各个字符*/

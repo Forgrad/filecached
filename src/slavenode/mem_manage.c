@@ -106,15 +106,15 @@ ssize_t mem_write(char filename[], size_t size, void* buf)
 ssize_t
 mem_write_block(char filename[], struct block *block)
 {
-	struct hash_node *node=hash_get(filename,mem_hash);
-	mem_node *m_node=hash_entry(node,mem_node,hnode);
-	size_t mem_size=m_node->size;
-	if (block->size>mem_size) return -1;
-	//memcpy(m_node->startpos,buf,size);
+    struct hash_node *node=hash_get(filename,mem_hash);
+    mem_node *m_node=hash_entry(node,mem_node,hnode);
+    size_t mem_size=m_node->size;
+    if (block->size>mem_size) return -1;
+    //memcpy(m_node->startpos,buf,size);
 
-	FILE * file = fopen(filename,"r");
-	mem_size = fread(m_node->startpos,1,block->size,file);
-	if(block->size != mem_size) return -1;
-	m_node->iswritting=0;
-	return 0;
+    FILE * file = fopen(filename,"r");
+    mem_size = fread(m_node->startpos,1,block->size,file);
+    if(block->size != mem_size) return -1;
+    m_node->iswritting=0;
+    return 0;
 }
