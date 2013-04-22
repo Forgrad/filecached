@@ -56,7 +56,7 @@ struct slave_info
 static inline int
 get_process_id(void)
 {
-	int id;
+    int id;
 	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 	return id;
 }
