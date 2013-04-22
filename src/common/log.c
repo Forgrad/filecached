@@ -99,7 +99,7 @@ close_log_file(int num)
 
 /* 设置log id */
 int
-set_log_id(int id)
+set_log_id(ssize_t id)
 {
     return pthread_setspecific(log_id, (void *)id);
 }

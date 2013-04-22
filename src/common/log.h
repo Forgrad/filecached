@@ -25,7 +25,7 @@ extern pthread_key_t log_id;
     time_t t;\
     time(&t);\
     FILE *log;\
-    if (log = log_file[(int)pthread_getspecific(log_id)]) { \
+    if (log = log_file[(ssize_t)pthread_getspecific(log_id)]) { \
     fprintf(log,"##%sFILE: "__FILE__", LINE: %d, "format"\n", \
             ctime(&t), __LINE__, ##__VA_ARGS__); \
     fflush(log); \

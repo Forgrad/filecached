@@ -282,16 +282,16 @@ static request_handler request_handlers[MAX_REQUEST_TYPES] = {
 static void *
 slave_listen_thread(void *param)
 {
-    int ret = 0;
+    ssize_t ret = 0;
 
     /* 构造request类型 */
 	struct handler_param handler_param;    
 	build_mpi_type_request(&handler_param.request, &handler_param.mpi_request_type);
 
     /* 设置log id */
-    ret = set_log_id((int)param);
+    ret = set_log_id((ssize_t)param);
     if (ret != 0) {
-        LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave failed to set log id!\n", loc_slave.id, (int)param);
+        LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave failed to set log id!\n", loc_slave.id, (ssize_t)param);
         return (void *)ret;
     }
     
@@ -299,7 +299,7 @@ slave_listen_thread(void *param)
 	MPI_Message message;
 	MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &handler_param.status);
 	MPI_Get_count(&handler_param.status, MPI_PACKED, &handler_param.buff_size);
-    LOG_MSG("IN SLAVE %d THREAD %d: INFO: request message probed!\n", loc_slave.id, (int)param);
+    LOG_MSG("IN SLAVE %d THREAD %d: INFO: request message probed!\n", loc_slave.id, (ssize_t)param);
     
 	/* 请求处理循环 */
 	while (1) {
@@ -309,28 +309,28 @@ slave_listen_thread(void *param)
 
         /* 根据试探长度，接收消息 */
         MPI_Mrecv(handler_param.buff, handler_param.buff_size, MPI_PACKED, &message, &handler_param.status);
-        LOG_MSG("IN SLAVE %d THREAD %d: INFO: request message received!\n", loc_slave.id, (int)param);
+        LOG_MSG("IN SLAVE %d THREAD %d: INFO: request message received!\n", loc_slave.id, (ssize_t)param);
 
         /* 解包struct request结构体信息 */
         MPI_Unpack(handler_param.buff, handler_param.buff_size, &handler_param.position, &handler_param.request,
                    1, handler_param.mpi_request_type, MPI_COMM_WORLD);
-		LOG_MSG("IN SLAVE %d THREAD %d: INFO: requst %d tag %d received!", loc_slave.id, (int)param,
+		LOG_MSG("IN SLAVE %d THREAD %d: INFO: requst %d tag %d received!", loc_slave.id, (ssize_t)param,
                 handler_param.request.request, handler_param.request.tag);
 
         /* 调用请求处理函数执行处理过程 */
         ret = request_handlers[handler_param.request.request](&handler_param);
         if (ret != 0) {
-            LOG_MSG("IN SLAVE %d THREAD %d: ERROR: requst %d tag %d failed handling!", loc_slave.id, (int)param,
+            LOG_MSG("IN SLAVE %d THREAD %d: ERROR: requst %d tag %d failed handling!", loc_slave.id, (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         } else {
-            LOG_MSG("IN SLAVE %d THREAD %d: INFO: requst %d tag %d handled!", loc_slave.id, (int)param,
+            LOG_MSG("IN SLAVE %d THREAD %d: INFO: requst %d tag %d handled!", loc_slave.id, (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         }
 
         /* 试探消息长度 */
         MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &handler_param.status);
 		MPI_Get_count(&handler_param.status, MPI_PACKED, &handler_param.buff_size);
-        LOG_MSG("IN SLAVE %d THREAD %d: INFO: request message probed!\n", loc_slave.id, (int)param);
+        LOG_MSG("IN SLAVE %d THREAD %d: INFO: request message probed!\n", loc_slave.id, (ssize_t)param);
 	}
 	return (void *)0;
 }
@@ -339,41 +339,41 @@ slave_listen_thread(void *param)
 static void *
 slave_main_thread(void *param)
 {
-	int ret = 0;
+	ssize_t ret = 0;
 
     /* 设置log id */
-    ret = set_log_id((int)param);
+    ret = set_log_id((ssize_t)param);
     if (ret != 0) {
-        LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave failed to set log id!\n", loc_slave.id, (int)param);
+        LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave failed to set log id!\n", loc_slave.id, (ssize_t)param);
         return (void *)ret;
     }
 
 	/* 创建监听线程 */
-	LOG_MSG("IN SLAVE %d THREAD %d: INFO: creating listenning thread!\n", loc_slave.id, (int)param);
-    int i;
+	LOG_MSG("IN SLAVE %d THREAD %d: INFO: creating listenning thread!\n", loc_slave.id, (ssize_t)param);
+    ssize_t i;
     for (i = 1; i < SLAVE_THREAD_NUM; i++) {
 		ret = pthread_create(&tid[i], NULL, slave_listen_thread, (void *)i);
         if (ret != 0) {
-            LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread failed to be created!\n", loc_slave.id, (int)param);
+            LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread failed to be created!\n", loc_slave.id, (ssize_t)param);
             return (void *)ret;
         }
 	}
-    LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread created!\n", loc_slave.id, (int)param);
+    LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread created!\n", loc_slave.id, (ssize_t)param);
     
 	/* 等待监听线程结束 */
 	for (i = 1; i < SLAVE_THREAD_NUM; i++) {
 		ret = pthread_join(tid[i], NULL);
         if (ret != 0) {
-            LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread failed to be stopped!\n", loc_slave.id, (int)param);
+            LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread failed to be stopped!\n", loc_slave.id, (ssize_t)param);
             return (void *)ret;
         }
 	}
-	LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread stopped!\n", loc_slave.id, (int)param);
+	LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave listenning thread stopped!\n", loc_slave.id, (ssize_t)param);
 
     /* 关闭日志文件 */
     ret = close_logger(SLAVE_THREAD_NUM);
     if (ret != 0) {
-        LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave logger failed to be closed!\n", loc_slave.id, (int)param);
+        LOG_MSG("IN SLAVE %d THREAD %d: INFO: slave logger failed to be closed!\n", loc_slave.id, (ssize_t)param);
     }
 	return (void *)ret;
 }
