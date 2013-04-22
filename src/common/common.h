@@ -57,8 +57,8 @@ static inline int
 get_process_id(void)
 {
     int id;
-	MPI_Comm_rank(MPI_COMM_WORLD, &id);
-	return id;
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
+    return id;
 }
 
 /* 根据给定数字在字符串后面添加数字字符 */
