@@ -33,7 +33,7 @@ build_mpi_type_request(struct request *input, MPI_Datatype *mpitype)
     MPI_Get_address(&input->request, &addresses[1]);
     MPI_Get_address(&input->tag, &addresses[2]);
     displacements[0] = addresses[1] - addresses[0];
-    displacements[1] = addresses[2] - addresses[1];
+    displacements[1] = addresses[2] - addresses[0];
 
     MPI_Type_struct(2, block_lengths, displacements, typelist, mpitype);
 
@@ -58,7 +58,7 @@ build_mpi_type_slave_info(struct slave_info *input, MPI_Datatype *mpitype)
     MPI_Get_address(&input->id, &addresses[1]);
     MPI_Get_address(&input->free, &addresses[2]);
     displacements[0] = addresses[1] - addresses[0];
-    displacements[1] = addresses[2] - addresses[1];
+    displacements[1] = addresses[2] - addresses[0];
         
     MPI_Type_struct(2, block_lengths, displacements, typelist, mpitype);
 
@@ -83,7 +83,7 @@ build_mpi_type_block(struct block *input, MPI_Datatype *mpitype)
     MPI_Get_address(&input->slave_id, &addresses[1]);
     MPI_Get_address(&input->size, &addresses[2]);
     displacements[0] = addresses[1] - addresses[0];
-    displacements[1] = addresses[2] - addresses[1];
+    displacements[1] = addresses[2] - addresses[0];
         
     MPI_Type_struct(2, block_lengths, displacements, typelist, mpitype);
 
@@ -106,22 +106,24 @@ build_mpi_type_share_file(struct share_file *input, MPI_Datatype *mpitype)
     
     typelist[0] = MPI_CHAR;
     typelist[1] = MPI_UNSIGNED_LONG;
-    typelist[2] = mpi_block_type;
-    typelist[3] = MPI_INT;
+    typelist[2] = MPI_INT;
+    typelist[3] = mpi_block_type;
     block_lengths[0] = MAX_PATH_LENGTH;
     block_lengths[1] = 1;
-    block_lengths[2] = MAX_BLOCKS;
-    block_lengths[3] = 1;
+    block_lengths[2] = 1;
+    block_lengths[3] = MAX_BLOCKS;
+    
 
     MPI_Get_address(input, &addresses[0]);
     MPI_Get_address(&input->hnode.str, &addresses[1]);
     MPI_Get_address(&input->size, &addresses[2]);
-    MPI_Get_address(&input->blocks, &addresses[3]);
-    MPI_Get_address(&input->block_num, &addresses[4]);
+    MPI_Get_address(&input->block_num, &addresses[3]);
+    MPI_Get_address(&input->blocks, &addresses[4]);
+    
     displacements[0] = addresses[1] - addresses[0];
-    displacements[1] = addresses[2] - addresses[1];
-    displacements[2] = addresses[3] - addresses[2];
-    displacements[3] = addresses[4] - addresses[3];
+    displacements[1] = addresses[2] - addresses[0];
+    displacements[2] = addresses[3] - addresses[0];
+    displacements[3] = addresses[4] - addresses[0];
         
     MPI_Type_struct(4, block_lengths, displacements, typelist, mpitype);
 

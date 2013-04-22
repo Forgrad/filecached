@@ -29,8 +29,8 @@ struct share_file
 {
     struct hash_node hnode;     /* 哈希表节点，包含文件路径字符串 */
     unsigned long size;                /* 文件大小 */
-    struct block blocks[MAX_BLOCKS]; /* 文件块信息数组 */
     int block_num;                  /* 文件块数量 */
+    struct block blocks[MAX_BLOCKS]; /* 文件块信息数组 */
 };
 
 /* 私有文件信息结构体 */
@@ -38,8 +38,8 @@ struct private_file
 {
     struct hash_node hnode;     /* 哈希表节点，包含文件路径字符串 */
     unsigned long size;                /* 文件大小 */
-    struct block blocks[MAX_BLOCKS]; /* 文件块信息数组 */
     int block_num;                  /* 文件块数量 */
+    struct block blocks[MAX_BLOCKS]; /* 文件块信息数组 */
 };
 
 /* 数据节点信息数据结构 */
