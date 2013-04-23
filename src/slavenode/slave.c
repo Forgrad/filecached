@@ -185,9 +185,10 @@ slave_remote_read(const char *file, int slave_id,unsigned long pos,
     /* 接收返回数据 */
     MPI_Status stat;
     int recv_count = 0;
-    MPI_Recv(&buf, size, MPI_CHAR, slave_id, req.tag, MPI_COMM_WORLD,&stat);
+    MPI_Recv(buf, size, MPI_CHAR, slave_id, req.tag, MPI_COMM_WORLD,&stat);
     if (MPI_Get_count(&stat, MPI_CHAR, &recv_count) != size) {
         LOG_MSG("IN FUNC slave_remote_read: ERROR: data return error!\n");
+        release_tag(slave_tags, req.tag, &lock_slave_tags);
         return recv_count;
     }
     LOG_MSG("IN FUNC slave_remote_read: INFO: remote read result received!\n");

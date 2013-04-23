@@ -8,24 +8,30 @@
  * Breif: 上层渲染应用数据访问接口函数实现
  * ****************************/
 
+#include <stdlib.h>
 
 #include "dfsio.h"
-
-
+#include "../slavenode/slave.h"
+#include "../common/hashtable.h"
+#include "../slavenode/mem_manage.h"
+#include "../common/common.h"
 
 
 dmf_file* dmf_open(char filename[])
 { 
     struct hash_node *node;
-    node=hash_get(filename,share_files);/*在哈希表中获得filename对应的哈希节点*/
+    node=hash_get(filename,share_files_slave);/*在哈希表中获得filename对应的哈希节点*/
     if (NULL==node) return NULL;
     dmf_file *file=malloc(sizeof(dmf_file));
     file->hnode=node;
     file->file_pos=0;
     return file;
-    
 }
 
+ssize_t remote_read(char filenameblkid[], int slave_id, size_t pos, size_t size, void* buf)
+{
+    return slave_remote_read(filenameblkid, slave_id, pos, size, buf);
+}
 
 
 
@@ -34,7 +40,7 @@ static ssize_t share_read(void *buf, size_t size, size_t count, dmf_file *file)
       struct share_file *node=hash_entry(file->hnode,struct share_file,hnode);/*获取相应的存放共享数据信息的结构*/
       if (file->file_pos>=node->size ||file->file_pos+size*count>node->size)
       return -1;/*读取溢出的情况*/
-      int is_here=node->blocks[0].slave_id==getprocessid()?1:0;/*判断共享文件是否在本地*/
+      int is_here=node->blocks[0].slave_id==get_process_id()?1:0;/*判断共享文件是否在本地*/
       ssize_t result;
       
       if (is_here) {
@@ -72,7 +78,7 @@ char* dmf_gets(char* buf, size_t size, dmf_file* file)
      size_t realsize=size-1<=file_have?size-1:file_have;
      char temp[realsize];
      int result;
-     if (node->blocks[0].slave_id==getprocessid()) 
+     if (node->blocks[0].slave_id==get_process_id()) 
          result=mem_read(node->hnode.str,file->file_pos,realsize,temp);
      else 
          result=remote_read(node->hnode.str,node->blocks[0].slave_id,file->file_pos,realsize,temp);
@@ -148,7 +154,3 @@ size_t dmf_tell(dmf_file* file)
      return file->file_pos;
 }
 
-ssize_t remote_read(char filenameblkid[], int slave_id, size_t pos, size_t size, void* buf)
-{
-     return 1;
-}
