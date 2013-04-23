@@ -16,6 +16,7 @@
 #define MAX_PATH_LENGTH 128
 #define MAX_SLAVES 20
 #define MAX_BLOCKS 1
+#define PAGEALIGN (8ul<<10)
 
 /* 线程数量常量 */
 #define MASTER_THREAD_NUM 2

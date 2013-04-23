@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <mpi.h>
 #include <time.h>
+#include <sys/resource.h>
 
 #include "slave.h"
 #include "../common/common.h"
@@ -396,6 +397,24 @@ init_dmf_slave(unsigned long mem)
     }
     LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: slave initializing!\n", pid);
 
+    /* 调整内存锁定限制 */
+    struct rlimit the_limit;
+    ret = getrlimit(RLIMIT_MEMLOCK, &the_limit);
+    if (ret != 0) {
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: get memlock limit failed!\n", pid);
+        return ret;
+    } else {
+        the_limit.rlim_cur = (rlim_t)((mem + PAGEALIGN - 1) /PAGEALIGN * PAGEALIGN);
+    }
+    if (the_limit.rlim_max < the_limit.rlim_cur) {
+        the_limit.rlim_max = the_limit.rlim_cur;
+    }
+    ret = setrlimit(RLIMIT_MEMLOCK, &the_limit);
+    if (ret != 0) {
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: set memlock limit failed!\n", pid);
+        return ret;
+    }
+    
     /* 初始化内存池 */
     ret = mem_init(&manager, mem);
     if (ret != 0) {
