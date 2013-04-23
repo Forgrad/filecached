@@ -386,51 +386,53 @@ init_dmf_slave(unsigned long mem)
 {
     int ret = 0;
 
+    int pid = get_process_id();
+    
     /* 初始化日志文件及线程日志编号 */
     ret = init_logger("./dmf_log/slave", SLAVE_THREAD_NUM);
     if (ret != 0 || set_log_id((void *)MAX_THREAD_NUM)) {
-        printf("IN FUN init_dmf_slave: ERROR: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n");
+        printf("IN SLAVE %d FUNC init_dmf_slave: ERROR: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n", pid);
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_slave: INFO: slave initializing!\n");
+    LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: slave initializing!\n", pid);
 
     /* 初始化内存池 */
     ret = mem_init(&manager, mem);
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_slave: ERROR: memory allocation failed!\n");
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: memory allocation failed!\n", pid);
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_slave: INFO: memory pool allocated!\n");
+    LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: memory pool allocated!\n", pid);
 
     /* 初始化本节点信息 */
     ret = init_slave_info();
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_slave: ERROR: slave info initialization failed!\n");
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: slave info initialization failed!\n", pid);
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_slave: INFO: slave info updated!\n");
+    LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: slave info updated!\n", pid);
     
     /* 创建slave各服务线程 */
     ret = pthread_create(&tid[0], NULL, slave_main_thread, 0);
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_slave: ERROR: failed to init slave threads!\n");
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: failed to init slave threads!\n", pid);
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_slave: INFO: slave thread created!\n");
+    LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: slave thread created!\n", pid);
     
     /* 发送slave信息 */
     ret = report_slave_info();
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_slave: ERROR: failed to report slave info!\n");
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: failed to report slave info!\n", pid);
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_slave: INFO: slave info reported!\n");
+    LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: slave info reported!\n", pid);
 
     /* 接收共享文件元数据 */
     ret = receive_share_file_map();
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_slave: ERROR: failed to receive share file map!\n");
+        LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: ERROR: failed to receive share file map!\n", pid);
     }
-    LOG_MSG("IN FUNC init_dmf_slave: INFO: share file map received!\n");
+    LOG_MSG("IN SLAVE %d FUNC init_dmf_slave: INFO: share file map received!\n", pid);
     return ret;
 }

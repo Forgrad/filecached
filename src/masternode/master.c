@@ -563,18 +563,18 @@ init_dmf_master(int slaves, char *files, \
     /* 初始化日志文件及线程日志编号 */
     ret = init_logger("./dmf_log/master/", MASTER_THREAD_NUM);
     if (ret != 0 || set_log_id((void *)MAX_THREAD_NUM)) {
-        printf("IN FUN init_dmf_master: ERROR: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n");
+        printf("IN MASTER FUNC init_dmf_master: ERROR: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n");
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_master: INFO: master initializing!\n");
+    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: master initializing!\n");
 
     /* 创建master主线程 */
     ret = pthread_create(&tid[0], NULL, master_main_thread, 0);
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to init master threads!\n");
+        LOG_MSG("IN MASTER FUNC init_dmf_master: ERROR: failed to init master threads!\n");
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_master: INFO: master thread created!\n");
+    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: master thread created!\n");
 
     /* 等待slave节点汇报 */
     pthread_mutex_lock(&lock_slaves);
@@ -582,23 +582,23 @@ init_dmf_master(int slaves, char *files, \
         pthread_cond_wait(&slaves_complete_cond, &lock_slaves);
     }
     pthread_mutex_unlock(&lock_slaves);
-    LOG_MSG("IN FUNC init_dmf_master: INFO: slaves ready!\n");
+    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: slaves ready!\n");
 
     /* 载入文件 */
     ret = load_files(files, load_file);
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to load files!\n");
+        LOG_MSG("IN MASTER FUNC init_dmf_master: ERROR: failed to load files!\n");
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_master: INFO: filed loaded!\n");
+    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: filed loaded!\n");
 
     /* 分发共享文件哈希表 */
     ret = distribute_share_files_map();
     if (ret != 0) {
-        LOG_MSG("IN FUNC init_dmf_master: ERROR: failed to distribute file maps!\n");
+        LOG_MSG("IN MASTER FUNC init_dmf_master: ERROR: failed to distribute file maps!\n");
         return ret;
     }
-    LOG_MSG("IN FUNC init_dmf_master: INFO: share file map distributed!\n");
+    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: share file map distributed!\n");
 
     /* 打印初始化后相关信息 */
     list_share_files();
