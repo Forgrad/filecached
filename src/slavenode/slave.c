@@ -232,7 +232,7 @@ handle_load_request(struct handler_param *handler_param)
     ret = mem_write_block(file, &block);
     if(ret != 0)
     {
-        printf("ERROR： IN FUNC handle_load_request: file load failed!\n");
+        LOG_MSG("ERROR： IN FUNC handle_load_request: file load failed!\n");
         return ret;
     }
     LOG_MSG("INFO： IN FUNC handle_load_request: file loaded into memory!\n");

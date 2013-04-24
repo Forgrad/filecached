@@ -113,6 +113,9 @@ mem_write_block(char filename[], struct block *block)
     //memcpy(m_node->startpos,buf,size);
 
     FILE * file = fopen(filename,"r");
+    if (file == NULL) {
+        return -1;
+    }
     mem_size = fread(m_node->startpos,1,block->size,file);
     if(block->size != mem_size) return -1;
     m_node->iswritting=0;
