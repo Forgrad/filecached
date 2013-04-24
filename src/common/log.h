@@ -17,7 +17,7 @@
 
 #include "constants.h"
 
-extern FILE *log_file[MAX_THREAD_NUM + 1];
+extern FILE *log_file[MAX_THREAD_NUM];
 extern pthread_key_t log_id;
 
 /* 目前先用标准输出实现，考虑到效率以后可以用其他方法 */

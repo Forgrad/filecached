@@ -60,7 +60,7 @@ load_files(const char *fullpath, int (*func)(char *))
     }
     
     if (stat(path, &statbuf) < 0) { /* 获取文件信息 */
-        LOG_MSG("IN FUNC load_files: ERROR: stat error for %s\n", path);
+        PRINT_INFO("MASTER: ERROR: IN FUNC load_files: stat error for %s\n", path);
         return -1;
     }
     
@@ -79,7 +79,7 @@ load_files(const char *fullpath, int (*func)(char *))
     }
 
     if ((dp = opendir(path)) == NULL) { /* 打开目录失败 */
-        LOG_MSG("IN FUNC load_files： ERROR: can't read directory %s\n", path);
+        PRINT_INFO("MASTER: ERROR: IN FUNC load_files: can't read directory %s\n", path);
         return -2;
     }
 
@@ -98,12 +98,12 @@ load_files(const char *fullpath, int (*func)(char *))
     ptr[-1] = 0;
 
     if (closedir(dp) < 0) {
-        LOG_MSG("IN FUNC load_files：ERROR: can't close directory %s\n", path);
+        PRINT_INFO("MASTER: ERROR: IN FUNC load_files: can't close directory %s\n", path);
         return -3;
     }
 
     if (outer == 1) {
-        LOG_MSG("IN FUNC load_files：INFO: file loaded: %d\n", file_loaded);
+        PRINT_INFO("MASTER: INFO: IN FUNC load_files: file loaded: %d\n", file_loaded);
         through = 0;
     }
 
@@ -174,7 +174,7 @@ block_load_req(char *file, struct block *block)
     /* 获得请求tag */
     int ret = get_tag(tags, &lock_tags);
     if (ret < 0) {
-        LOG_MSG("IN FUNC block_load_request: ERROR: tag can't be assigned!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC block_load_request: tag can't be assigned!\n");
         return ret;
     }
     request.tag = ret;
@@ -195,9 +195,9 @@ block_load_req(char *file, struct block *block)
     MPI_Pack(block, 1, mpi_block_type, buff, sum_size, &position, MPI_COMM_WORLD);
 
     /* 发送请求 */
-    LOG_MSG("IN FUNC block_load_req: INFO: sending block %d for %s load request to slave %d!\n", block->block_id, file, block->slave_id);
+    PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: sending block %d for %s load request to slave %d!\n", block->block_id, file, block->slave_id);
     MPI_Send(buff, position, MPI_PACKED, block->slave_id, REQUEST_TAG, MPI_COMM_WORLD);
-    LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s load request sent to slave %d!\n", block->block_id, file, block->slave_id);
+    PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: block %d for %s load request sent to slave %d!\n", block->block_id, file, block->slave_id);
 
     /* 接收ack */
     ret = 0;
@@ -205,15 +205,15 @@ block_load_req(char *file, struct block *block)
     MPI_Status status;
     MPI_Recv(&ack, 1, mpi_request_type, block->slave_id, request.tag, MPI_COMM_WORLD, &status);
     if (ack.request == request.request && ack.tag == request.tag) {
-        LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s loaded at slave %d!\n", block->block_id, file, block->slave_id);
+        PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: block %d for %s loaded at slave %d!\n", block->block_id, file, block->slave_id);
     } else {
-        LOG_MSG("IN FUNC block_load_req: INFO: block %d for %s loading at slave %d returned wrong ack!\n", block->block_id, file, block->slave_id);
+        PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: block %d for %s loading at slave %d returned wrong ack!\n", block->block_id, file, block->slave_id);
         ret = -1;
     }
     
     /* 释放tag */
     if (release_tag(tags, request.tag, &lock_tags) != 0) {
-        LOG_MSG("IN FUNC block_load_req: ERROR: tag %d release error!\n", request.tag);
+        PRINT_INFO("MASTER: ERROR: IN FUNC block_load_req: tag %d release error!\n", request.tag);
         ret = -2;
     }
     
@@ -225,14 +225,14 @@ static int
 distribute_file(char *file, struct stat *statbuf)
 {
     if ((file == NULL) || (statbuf == NULL)) {
-        LOG_MSG("IN FUNC distribute_file： ERROR: NULL file name or statbuf!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: NULL file name or statbuf!\n");
         return -1;
     }
 
     /* 为文件分配share_file节点 */
     struct share_file *file_node = init_share_file_node(file, statbuf);
     if (file_node == NULL) {
-        LOG_MSG("IN FUNC distribute_file: ERROR: share_file node init error!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: share_file node init error!\n");
         return -2;
     }
     file_node->size = statbuf->st_size;
@@ -241,19 +241,19 @@ distribute_file(char *file, struct stat *statbuf)
     int slave;
     slave = choose_slave(file_node->size);
     if (slave < 0) {
-        LOG_MSG("IN FUNC distribute_file: ERROR: no propriate slave!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: no propriate slave!\n");
         return -3;
     }
 
     /* 载入文件不分块，请求slave载入 */
     int ret;
-    LOG_MSG("IN FUNC distribute_file: INFO: request slave %d to load file %s!\n", slave, file_node->hnode.str);
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_file: request slave %d to load file %s!\n", slave, file_node->hnode.str);
     ret = block_load_req(file_node->hnode.str, fill_block(&file_node->blocks[0], 0, file_node->size, 0, slave));
     if (ret) {
-        LOG_MSG("IN FUNC distribute_file: ERROR: block load request failed!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: block load request failed!\n");
         return -4;
     }
-    LOG_MSG("IN FUNC distribute_file: INFO: slave %d loaded file %s\n", slave, file_node->hnode.str);
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_file: slave %d loaded file %s\n", slave, file_node->hnode.str);
     file_node->block_num = 1;
 
     /* 更新节点信息 */
@@ -261,19 +261,19 @@ distribute_file(char *file, struct stat *statbuf)
     slaves[slave].free -= file_node->size;
     slaves[slave].last_update = time(NULL);
     pthread_mutex_unlock(&lock_slaves);
-    LOG_MSG("IN FUNC distribute_file: INFO: slave %d status updated!\n", slave);
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_file: slave %d status updated!\n", slave);
 
     /* 将share_file节点插入哈希表 */
     pthread_mutex_lock(&lock_share_files);
     if (&file_node->hnode != hash_insert(&file_node->hnode, share_files)) {
-        LOG_MSG("IN FUNC distribute: ERROR: file hash failed\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: file hash failed\n");
         pthread_mutex_unlock(&lock_share_files);
         return -5;
     }
     share_file_num++;
     pthread_mutex_unlock(&lock_share_files);
     
-    LOG_MSG("IN FUNC distribute: INFO: file %s load success!\n", file_node->hnode.str);
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_file: file %s load success!\n", file_node->hnode.str);
 
     return 0;
 }
@@ -284,13 +284,13 @@ load_file(char *file)
 {
     struct stat statbuf;
 
-    LOG_MSG("IN FUNC load_file: INFO: load file %s\n", file);
+    PRINT_INFO("MASTER: INFO: IN FUNC load_file: load file %s\n", file);
 
     if (stat(file, &statbuf) < 0) {
-        LOG_MSG("IN FUNC load_file: ERROR: stat error for %s\n", file);
+        PRINT_INFO("MASTER: ERROR: IN FUNC load_file: stat error for %s\n", file);
     }
 
-    LOG_MSG("IN FUNC load_file: INFO: file %s size %ld bytes\n", file, statbuf.st_size);
+    PRINT_INFO("MASTER: INFO: IN FUNC load_file: file %s size %ld bytes\n", file, statbuf.st_size);
 
     return distribute_file(file, &statbuf);
 }
@@ -374,7 +374,7 @@ distribute_share_files_map(void)
     int file_num = share_file_num;
 
     /* 计算缓冲区大小 */
-    LOG_MSG("IN FUNC distribute_share_files_map: INFO: packing share files info!");
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: packing share files info!");
     MPI_Pack_size(share_file_num, param.mpi_share_file_type, MPI_COMM_WORLD, &param.size);
     param.buff = (char *)malloc(param.size);
     param.position = 0;
@@ -385,7 +385,7 @@ distribute_share_files_map(void)
     pthread_mutex_unlock(&lock_share_files);
 
     /* Broadcast不能用Probe接收，因此依次发送。。。 */
-    LOG_MSG("IN FUNC distribute_share_files_map: INFO: sending share files info!");
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: sending share files info!");
     int i;
     for (i = 1; i <= slave_num;) {
         if (MPI_Send(param.buff, param.position, MPI_PACKED, i, SHARE_FILE_DIS_TAG, MPI_COMM_WORLD) == 0) {
@@ -395,7 +395,7 @@ distribute_share_files_map(void)
     /* 释放缓冲区 */
     free(param.buff);
 
-    LOG_MSG("IN FUNC distribute_share_files_map: INFO: share files info sended!");
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: share files info sended!");
     
     return 0;
 }
@@ -435,11 +435,11 @@ handle_slave_report(struct handler_param *param)
 
     /* 解包slave_info信息 */
     MPI_Unpack(param->buff, param->buff_size, &param->position, &slave, 1, mpi_slave_info_type, MPI_COMM_WORLD);
-    LOG_MSG("IN FUNC handle_slave_report: INFO: slave info unpacked!\n");
+    LOG_MSG("INFO: IN FUNC handle_slave_report: slave info unpacked!\n");
 
     /* 更新slave信息 */
     update_slave_info(&slave);
-    LOG_MSG("IN FUNC handle_slave_report: INFO: slave info updated!\n");
+    LOG_MSG("INFO: IN FUNC handle_slave_report: slave info updated!\n");
 
     /* 发送回执 */
     MPI_Send(&param->request, 1, param->mpi_request_type, param->status.MPI_SOURCE, param->request.tag, MPI_COMM_WORLD);
@@ -464,7 +464,7 @@ master_listen_thread(void *param)
     ssize_t ret = 0;
     ret = set_log_id((ssize_t)param);
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: slave failed to set log id!\n", (ssize_t)param);
+        LOG_MSG("ERROR: IN MASTER THREAD %d: slave failed to set log id!\n", (ssize_t)param);
         return (void *)ret;
     }
 
@@ -472,7 +472,7 @@ master_listen_thread(void *param)
     MPI_Message message;
     MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &handler_param.status);
     MPI_Get_count(&handler_param.status, MPI_PACKED, &handler_param.buff_size);
-    LOG_MSG("IN MASTER THREAD %d: INFO: request message probed!\n", (ssize_t)param);
+    LOG_MSG("INFO: IN MASTER THREAD %d: request message probed!\n", (ssize_t)param);
     
     /* 请求处理循环 */
     while (1) {
@@ -482,28 +482,28 @@ master_listen_thread(void *param)
 
         /* 根据试探长度，接收消息 */
         MPI_Mrecv(handler_param.buff, handler_param.buff_size, MPI_PACKED, &message, &handler_param.status);
-        LOG_MSG("IN MASTER THREAD %d: INFO: request message received!\n", (ssize_t)param);
+        LOG_MSG("INFO: IN MASTER THREAD %d: request message received!\n", (ssize_t)param);
 
         /* 解包struct request结构体信息 */
         MPI_Unpack(handler_param.buff, handler_param.buff_size, &handler_param.position, &handler_param.request,
                    1, handler_param.mpi_request_type, MPI_COMM_WORLD);
-        LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d received!", (ssize_t)param, handler_param.request.request,
+        LOG_MSG("INFO: IN MASTER THREAD %d: requst %d tag %d received!", (ssize_t)param, handler_param.request.request,
                 handler_param.request.tag);
 
         /* 调用请求处理函数执行处理过程 */
         ret = request_handlers[handler_param.request.request](&handler_param);
         if (ret != 0) {
-            LOG_MSG("IN MASTER THREAD %d: ERROR: requst %d tag %d failed handling!", (ssize_t)param,
+            LOG_MSG("ERROR: IN MASTER THREAD %d: requst %d tag %d failed handling!", (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         } else {
-            LOG_MSG("IN MASTER THREAD %d: INFO: requst %d tag %d handled!", (ssize_t)param,
+            LOG_MSG("INFO: IN MASTER THREAD %d: requst %d tag %d handled!", (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         }
 
         /* 试探消息长度 */
         MPI_Mprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &message, &handler_param.status);
         MPI_Get_count(&handler_param.status, MPI_PACKED, &handler_param.buff_size);
-        LOG_MSG("IN MASTER THREAD %d: INFO: request message probed!\n", (ssize_t)param);
+        LOG_MSG("INFO: IN MASTER THREAD %d: request message probed!\n", (ssize_t)param);
     }
     return (void *)0;
 }
@@ -517,36 +517,36 @@ master_main_thread(void *param)
     /* 设置log id */
     ret = set_log_id((ssize_t) param);
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: failed to set log id!\n", (ssize_t)param);
+        LOG_MSG("ERROR: IN MASTER THREAD %d: failed to set log id!\n", (ssize_t)param);
         return (void *)ret;
     }
 
     /* 创建监听线程 */
-    LOG_MSG("IN MASTER THREAD %d: INFO: creating listenning threads!\n", (ssize_t)param);
+    LOG_MSG("INFO: IN MASTER THREAD %d: creating listenning threads!\n", (ssize_t)param);
     ssize_t i;
     for (i = 1; i < MASTER_THREAD_NUM; i++) {
         ret = pthread_create(&tid[i], NULL, master_listen_thread, (void *)i);
      }
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: listenning thread failed to be created!\n", (ssize_t)param);
+        LOG_MSG("ERROR: IN MASTER THREAD %d: listenning thread failed to be created!\n", (ssize_t)param);
         return (void *)ret;
     }
-    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads created!\n", (ssize_t)param);
+    LOG_MSG("INFO: IN MASTER THREAD %d: listenning threads created!\n", (ssize_t)param);
 
     /* 等待监听线程结束 */
     for (i = 1; i < MASTER_THREAD_NUM; i++) {
         ret = pthread_join(tid[i], NULL);
         if (ret != 0) {
-            LOG_MSG("IN MASTER THREAD %d: INFO: listenning thread failed to be stopped!\n", (ssize_t)param);
+            LOG_MSG("ERROR: IN MASTER THREAD %d: listenning thread failed to be stopped!\n", (ssize_t)param);
             return (void *)ret;
         }
     }
-    LOG_MSG("IN MASTER THREAD %d: INFO: listenning threads stopped!\n", (ssize_t)param);
+    LOG_MSG("INFO: IN MASTER THREAD %d: listenning threads stopped!\n", (ssize_t)param);
 
     /* 关闭日志文件 */
     ret = close_logger(MASTER_THREAD_NUM);
     if (ret != 0) {
-        LOG_MSG("IN MASTER THREAD %d: INFO: logger failed to be closed!\n", (ssize_t)param);
+        LOG_MSG("ERROR: IN MASTER THREAD %d: logger failed to be closed!\n", (ssize_t)param);
     }
     return (void *)ret;
 }
@@ -562,19 +562,19 @@ init_dmf_master(int slaves, char *files, \
 
     /* 初始化日志文件及线程日志编号 */
     ret = init_logger("./dmf_log/master/", MASTER_THREAD_NUM);
-    if (ret != 0 || set_log_id((void *)MAX_THREAD_NUM)) {
-        printf("IN MASTER FUNC init_dmf_master: ERROR: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n");
+    if (ret != 0) {
+        PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: logger initialization failed!\n NOTICE: LOG DIRCTORY MUST EXISTS!\n");
         return ret;
     }
-    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: master initializing!\n");
+    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: master initializing!\n");
 
     /* 创建master主线程 */
     ret = pthread_create(&tid[0], NULL, master_main_thread, 0);
     if (ret != 0) {
-        LOG_MSG("IN MASTER FUNC init_dmf_master: ERROR: failed to init master threads!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: failed to init master threads!\n");
         return ret;
     }
-    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: master thread created!\n");
+    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: master thread created!\n");
 
     /* 等待slave节点汇报 */
     pthread_mutex_lock(&lock_slaves);
@@ -582,23 +582,23 @@ init_dmf_master(int slaves, char *files, \
         pthread_cond_wait(&slaves_complete_cond, &lock_slaves);
     }
     pthread_mutex_unlock(&lock_slaves);
-    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: slaves ready!\n");
+    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: slaves ready!\n");
 
     /* 载入文件 */
     ret = load_files(files, load_file);
     if (ret != 0) {
-        LOG_MSG("IN MASTER FUNC init_dmf_master: ERROR: failed to load files!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: failed to load files!\n");
         return ret;
     }
-    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: filed loaded!\n");
+    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: filed loaded!\n");
 
     /* 分发共享文件哈希表 */
     ret = distribute_share_files_map();
     if (ret != 0) {
-        LOG_MSG("IN MASTER FUNC init_dmf_master: ERROR: failed to distribute file maps!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: failed to distribute file maps!\n");
         return ret;
     }
-    LOG_MSG("IN MASTER FUNC init_dmf_master: INFO: share file map distributed!\n");
+    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: share file map distributed!\n");
 
     /* 打印初始化后相关信息 */
     list_share_files();

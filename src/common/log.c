@@ -17,7 +17,7 @@
 #include "log.h"
 #include "common.h"
 
-FILE *log_file[MAX_THREAD_NUM + 1]; /* log文件 */
+FILE *log_file[MAX_THREAD_NUM] = {};     /* log文件 */
 pthread_key_t log_id;               /* 每线程log id */
 
 /* 初始化log文件 */
@@ -34,11 +34,12 @@ init_logger(char *path, int thread_num)
     }
 
     /* 构建相应的文件名 */
-    if (get_process_id() == 0) {
+    int pid;
+    if ((pid = get_process_id()) == 0) {
         strcat(path_buf, "master");
     } else {
         strcat(path_buf, "slave");
-        strcatn(path_buf, get_process_id());
+        strcatn(path_buf, pid);
     }
     
     strcat(path_buf, "thread");
@@ -62,8 +63,6 @@ init_logger(char *path, int thread_num)
             return -1;
         }
     }
-    /* 将最后一个文件指向stdout留给init函数 */
-    log_file[MAX_THREAD_NUM] = stdout;
 
     /* 初始化每线程变量log id */
     return pthread_key_create(&log_id, NULL);

@@ -11,6 +11,7 @@
 #define COMMON_HEADER
 
 #include <mpi.h>
+#include <stdio.h>
 
 #include "hashtable.h"
 #include "constants.h"
@@ -80,6 +81,15 @@ strcatn(char *path, int n)
     }
     return path;
 }
+
+#if defined(DEBUG)
+#define PRINT_INFO(format,...) \
+    printf(format, ##__VA_ARGS__);
+#else
+#define PRINT_INFO(format,...)
+#endif
+     
+     
 
 #endif
 

@@ -38,7 +38,7 @@ typedef struct mem_node/*本内存管理中有一个hash表，mem_node是该表�
   
 /*在slave上初始化一块内存资源池，成功初始化返回0，失败则返回-1*/
 int
-mem_init(managememory *manager, size_t size);
+mem_init(managememory *manager, size_t size, int lock_flag);
 
 /*动态共享数据载入前先向该内存资源池申请空间，如果有剩余空间则返回0，文件重命名则返回-1，空间不够返回-2*/
 int 
