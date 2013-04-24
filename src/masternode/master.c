@@ -266,7 +266,7 @@ distribute_file(char *file, struct stat *statbuf)
     /* 将share_file节点插入哈希表 */
     pthread_mutex_lock(&lock_share_files);
     if (&file_node->hnode != hash_insert(&file_node->hnode, share_files)) {
-        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: file hash failed\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: file hash failed!\n");
         pthread_mutex_unlock(&lock_share_files);
         return -5;
     }
@@ -374,7 +374,7 @@ distribute_share_files_map(void)
     int file_num = share_file_num;
 
     /* 计算缓冲区大小 */
-    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: packing share files info!");
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: packing share files info!\n");
     MPI_Pack_size(share_file_num, param.mpi_share_file_type, MPI_COMM_WORLD, &param.size);
     param.buff = (char *)malloc(param.size);
     param.position = 0;
@@ -385,7 +385,7 @@ distribute_share_files_map(void)
     pthread_mutex_unlock(&lock_share_files);
 
     /* Broadcast不能用Probe接收，因此依次发送。。。 */
-    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: sending share files info!");
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: sending share files info!\n");
     int i;
     for (i = 1; i <= slave_num;) {
         if (MPI_Send(param.buff, param.position, MPI_PACKED, i, SHARE_FILE_DIS_TAG, MPI_COMM_WORLD) == 0) {
@@ -395,7 +395,7 @@ distribute_share_files_map(void)
     /* 释放缓冲区 */
     free(param.buff);
 
-    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: share files info sended!");
+    PRINT_INFO("MASTER: INFO: IN FUNC distribute_share_files_map: share files info sended!\n");
     
     return 0;
 }
@@ -487,16 +487,16 @@ master_listen_thread(void *param)
         /* 解包struct request结构体信息 */
         MPI_Unpack(handler_param.buff, handler_param.buff_size, &handler_param.position, &handler_param.request,
                    1, handler_param.mpi_request_type, MPI_COMM_WORLD);
-        LOG_MSG("INFO: IN MASTER THREAD %d: requst %d tag %d received!", (ssize_t)param, handler_param.request.request,
+        LOG_MSG("INFO: IN MASTER THREAD %d: request %d tag %d received!\n", (ssize_t)param, handler_param.request.request,
                 handler_param.request.tag);
 
         /* 调用请求处理函数执行处理过程 */
         ret = request_handlers[handler_param.request.request](&handler_param);
         if (ret != 0) {
-            LOG_MSG("ERROR: IN MASTER THREAD %d: requst %d tag %d failed handling!", (ssize_t)param,
+            LOG_MSG("ERROR: IN MASTER THREAD %d: request %d tag %d failed handling!\n", (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         } else {
-            LOG_MSG("INFO: IN MASTER THREAD %d: requst %d tag %d handled!", (ssize_t)param,
+            LOG_MSG("INFO: IN MASTER THREAD %d: requst %d tag %d handled!\n", (ssize_t)param,
                     handler_param.request.request, handler_param.request.tag);
         }
 
@@ -590,12 +590,12 @@ init_dmf_master(int slaves, char *files, \
         PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: failed to load files!\n");
         return ret;
     }
-    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: filed loaded!\n");
+    PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: files loaded!\n");
 
     /* 分发共享文件哈希表 */
     ret = distribute_share_files_map();
     if (ret != 0) {
-        PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: failed to distribute file maps!\n");
+        PRINT_INFO("MASTER: ERROR: IN FUNC init_dmf_master: failed to distribute file map!\n");
         return ret;
     }
     PRINT_INFO("MASTER: INFO: IN FUNC init_dmf_master: share file map distributed!\n");

@@ -50,8 +50,6 @@ init_slave_info(void)
 static int 
 report_slave_info(void)
 {
-    int pid = get_process_id();
-    
     /* 准备相应mpi类型 */
     MPI_Datatype mpi_request_type;
     MPI_Datatype mpi_slave_info_type;
@@ -63,7 +61,7 @@ report_slave_info(void)
     req.request = SLAVE_REPORT;
     int ret = get_tag(slave_tags, &lock_slave_tags);
     if (ret < 0) {
-        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: tag can't be assigned!\n", pid);
+        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: tag can't be assigned!\n", loc_slave.pid);
         return ret;
     }
     req.tag = ret;
@@ -82,19 +80,19 @@ report_slave_info(void)
     MPI_Pack(&loc_slave, 1, mpi_slave_info_type, buff, sum_size, &position, MPI_COMM_WORLD);
 
     /* 发送slave report */
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave report sending!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave report sending!\n", loc_slave.pid);
     MPI_Send(buff, position, MPI_PACKED, 0, REQUEST_TAG, MPI_COMM_WORLD);
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave info report sended!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave info report sended!\n", loc_slave.pid);
 
     /* 接收确认 */
     MPI_Status stat;
     struct request req_ack;
     MPI_Recv(&req_ack, 1, mpi_request_type, 0, req.tag, MPI_COMM_WORLD, &stat);
     if (req_ack.tag != req.tag || req_ack.request != req.request) {
-        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: wrong request ack received!\n");
+        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: wrong request ack received!\n", loc_slave.pid);
         return -2;
     }
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: report ack received!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: report ack received!\n", loc_slave.id);
 
     release_tag(slave_tags, req.tag, &lock_slave_tags);
     return 0;
@@ -113,13 +111,13 @@ receive_share_file_map(void)
     MPI_Status status;
     MPI_Message message;
     int buff_size;
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: probing master message!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: probing master message!\n", loc_slave.id);
     MPI_Mprobe(0, SHARE_FILE_DIS_TAG, MPI_COMM_WORLD, &message, &status);
     MPI_Get_count(&status, MPI_PACKED, &buff_size);
     char buff[buff_size];
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: receiving master message!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: receiving master message!\n", loc_slave.id);
     MPI_Mrecv(buff, buff_size, MPI_PACKED, &message, &status);
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: master message received!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: master message received!\n", loc_slave.id);
 
     /* 提取share file信息，并插入哈希表 */
     int position = 0;
@@ -127,17 +125,17 @@ receive_share_file_map(void)
     {
         struct share_file *file = (struct share_file *)malloc(sizeof(struct share_file));
         if (file == NULL) {
-            PRINT_INFO("SLAVE %d: ERROR: IN FUNC receive_share_file_map: malloc fail for struct share_file!\n");
+            PRINT_INFO("SLAVE %d: ERROR: IN FUNC receive_share_file_map: malloc fail for struct share_file!\n", loc_slave.id);
             return -1;
         }
         MPI_Unpack(buff, buff_size, &position, file, 1, mpi_share_file_type, MPI_COMM_WORLD);
         if(hash_insert(&file->hnode, share_files_slave) != &file->hnode)
         {
-            PRINT_INFO("SLAVE %d: ERROR: IN FUN receive_share_file_map: share_files table insert failed!\n");
+            PRINT_INFO("SLAVE %d: ERROR: IN FUN receive_share_file_map: share_files table insert failed!\n", loc_slave.id);
             return -2;
         }
     }
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: share_files table constructed!\n");
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC receive_share_file_map: share_files table constructed!\n", loc_slave.id);
     
     return 0;
 }
