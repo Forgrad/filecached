@@ -61,7 +61,7 @@ report_slave_info(void)
     req.request = SLAVE_REPORT;
     int ret = get_tag(slave_tags, &lock_slave_tags);
     if (ret < 0) {
-        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: tag can't be assigned!\n", loc_slave.pid);
+        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: tag can't be assigned!\n", loc_slave.id);
         return ret;
     }
     req.tag = ret;
@@ -80,16 +80,16 @@ report_slave_info(void)
     MPI_Pack(&loc_slave, 1, mpi_slave_info_type, buff, sum_size, &position, MPI_COMM_WORLD);
 
     /* 发送slave report */
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave report sending!\n", loc_slave.pid);
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave report sending!\n", loc_slave.id);
     MPI_Send(buff, position, MPI_PACKED, 0, REQUEST_TAG, MPI_COMM_WORLD);
-    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave info report sended!\n", loc_slave.pid);
+    PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: slave info report sended!\n", loc_slave.id);
 
     /* 接收确认 */
     MPI_Status stat;
     struct request req_ack;
     MPI_Recv(&req_ack, 1, mpi_request_type, 0, req.tag, MPI_COMM_WORLD, &stat);
     if (req_ack.tag != req.tag || req_ack.request != req.request) {
-        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: wrong request ack received!\n", loc_slave.pid);
+        PRINT_INFO("SLAVE %d: ERROR: IN FUNC report_slave_info: wrong request ack received!\n", loc_slave.id);
         return -2;
     }
     PRINT_INFO("SLAVE %d: INFO: IN FUNC report_slave_info: report ack received!\n", loc_slave.id);
