@@ -233,6 +233,10 @@ handle_load_request(struct handler_param *handler_param)
     if(ret != 0)
     {
         LOG_MSG("ERROR： IN FUNC handle_load_request: file load failed!\n");
+        struct request error_req_ack;
+        error_req_ack.request = -(handler_param->request.request);
+        error_req_ack.tag = handler_param->request.tag;
+        MPI_Send(&handler_param->request, 1, mpi_request_type, 0, handler_param->request.tag, MPI_COMM_WORLD);
         return ret;
     }
     LOG_MSG("INFO： IN FUNC handle_load_request: file loaded into memory!\n");
@@ -294,7 +298,7 @@ slave_listen_thread(void *param)
     /* 设置log id */
     ret = set_log_id((ssize_t)param);
     if (ret != 0) {
-        LOG_MSG("INFO： SLAVE %d THREAD %d: slave failed to set log id!\n", loc_slave.id, (ssize_t)param);
+        LOG_MSG("ERROR： SLAVE %d THREAD %d: slave failed to set log id!\n", loc_slave.id, (ssize_t)param);
         return (void *)ret;
     }
     
@@ -347,7 +351,7 @@ slave_main_thread(void *param)
     /* 设置log id */
     ret = set_log_id((ssize_t)param);
     if (ret != 0) {
-        LOG_MSG("INFO： SLAVE %d THREAD %d: slave failed to set log id!\n", loc_slave.id, (ssize_t)param);
+        LOG_MSG("ERROR： SLAVE %d THREAD %d: slave failed to set log id!\n", loc_slave.id, (ssize_t)param);
         return (void *)ret;
     }
 
@@ -357,7 +361,7 @@ slave_main_thread(void *param)
     for (i = 1; i < SLAVE_THREAD_NUM; i++) {
         ret = pthread_create(&tid[i], NULL, slave_listen_thread, (void *)i);
         if (ret != 0) {
-            LOG_MSG("INFO： SLAVE %d THREAD %d: slave listenning thread failed to be created!\n", loc_slave.id, (ssize_t)param);
+            LOG_MSG("ERROR： SLAVE %d THREAD %d: slave listenning thread failed to be created!\n", loc_slave.id, (ssize_t)param);
             return (void *)ret;
         }
     }
@@ -367,7 +371,7 @@ slave_main_thread(void *param)
     for (i = 1; i < SLAVE_THREAD_NUM; i++) {
         ret = pthread_join(tid[i], NULL);
         if (ret != 0) {
-            LOG_MSG("INFO： SLAVE %d THREAD %d: slave listenning thread failed to be stopped!\n", loc_slave.id, (ssize_t)param);
+            LOG_MSG("ERROR： SLAVE %d THREAD %d: slave listenning thread failed to be stopped!\n", loc_slave.id, (ssize_t)param);
             return (void *)ret;
         }
     }
@@ -376,7 +380,7 @@ slave_main_thread(void *param)
     /* 关闭日志文件 */
     ret = close_logger(SLAVE_THREAD_NUM);
     if (ret != 0) {
-        LOG_MSG("INFO： SLAVE %d THREAD %d: slave logger failed to be closed!\n", loc_slave.id, (ssize_t)param);
+        LOG_MSG("ERROR： SLAVE %d THREAD %d: slave logger failed to be closed!\n", loc_slave.id, (ssize_t)param);
     }
     return (void *)ret;
 }

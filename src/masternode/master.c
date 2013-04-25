@@ -207,7 +207,7 @@ block_load_req(char *file, struct block *block)
     if (ack.request == request.request && ack.tag == request.tag) {
         PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: block %d for %s loaded at slave %d!\n", block->block_id, file, block->slave_id);
     } else {
-        PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: block %d for %s loading at slave %d returned wrong ack!\n", block->block_id, file, block->slave_id);
+        PRINT_INFO("MASTER: ERROR: IN FUNC block_load_req: block %d for %s loading at slave %d returned wrong ack!\n", block->block_id, file, block->slave_id);
         ret = -1;
     }
     
