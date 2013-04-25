@@ -236,7 +236,7 @@ handle_load_request(struct handler_param *handler_param)
         struct request error_req_ack;
         error_req_ack.request = -(handler_param->request.request);
         error_req_ack.tag = handler_param->request.tag;
-        MPI_Send(&handler_param->request, 1, mpi_request_type, 0, handler_param->request.tag, MPI_COMM_WORLD);
+        MPI_Send(&error_req_ack, 1, mpi_request_type, 0, error_req_ack.tag, MPI_COMM_WORLD);
         return ret;
     }
     LOG_MSG("INFO： IN FUNC handle_load_request: file loaded into memory!\n");

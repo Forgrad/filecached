@@ -83,6 +83,7 @@ load_files(const char *fullpath, int (*func)(char *))
         return -2;
     }
 
+    ret = 0;
     while ((dirp = readdir(dp)) != NULL) {
         /* 忽略本身及父目录 */
         if (strcmp(dirp->d_name, ".") == 0 ||   \
@@ -172,12 +173,12 @@ block_load_req(char *file, struct block *block)
     build_mpi_type_block(block, &mpi_block_type);
 
     /* 获得请求tag */
-    int ret = get_tag(tags, &lock_tags);
-    if (ret < 0) {
+    int tag = get_tag(tags, &lock_tags);
+    if (tag < 0) {
         PRINT_INFO("MASTER: ERROR: IN FUNC block_load_request: tag can't be assigned!\n");
-        return ret;
+        return tag;
     }
-    request.tag = ret;
+    request.tag = tag;
     request.request = BLOCK_LOAD_REQ;
 
     /* 包装数据 */
@@ -200,7 +201,7 @@ block_load_req(char *file, struct block *block)
     PRINT_INFO("MASTER: INFO: IN FUNC block_load_req: block %d for %s load request sent to slave %d!\n", block->block_id, file, block->slave_id);
 
     /* 接收ack */
-    ret = 0;
+    int ret = 0;
     struct request ack;
     MPI_Status status;
     MPI_Recv(&ack, 1, mpi_request_type, block->slave_id, request.tag, MPI_COMM_WORLD, &status);
@@ -461,7 +462,7 @@ master_listen_thread(void *param)
     build_mpi_type_request(&handler_param.request, &handler_param.mpi_request_type);
 
     /* 设置log id */
-    ssize_t ret = 0;
+    ssize_t ret;
     ret = set_log_id((ssize_t)param);
     if (ret != 0) {
         LOG_MSG("ERROR: IN MASTER THREAD %d: slave failed to set log id!\n", (ssize_t)param);
@@ -512,7 +513,7 @@ master_listen_thread(void *param)
 static void *
 master_main_thread(void *param)
 {
-    ssize_t ret = 0;
+    ssize_t ret;
 
     /* 设置log id */
     ret = set_log_id((ssize_t) param);
@@ -558,7 +559,7 @@ init_dmf_master(int slaves, char *files, \
                 unsigned long mem_size, \
                 unsigned long file_size)
 {
-    ssize_t ret = 0;
+    ssize_t ret;
 
     /* 初始化日志文件及线程日志编号 */
     ret = init_logger("./dmf_log/master/", MASTER_THREAD_NUM);
