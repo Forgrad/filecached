@@ -264,6 +264,7 @@ handle_remote_read(struct handler_param *handler_param)
     char *buf = (char *)malloc(size_count[1]);
 
     /* 读取本地数据 */
+    LOG_MSG("INFO: IN FUNC handle_remote_read: start to read data from local memory\n");
     ret = mem_read(file, size_count[0], size_count[1], buf);
     if (ret != size_count[1]) {
         LOG_MSG("ERROR： IN FUNC handle_remote_read: requested data not fully readed!\n");

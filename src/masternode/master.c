@@ -249,7 +249,7 @@ distribute_file(char *file, struct stat *statbuf)
     int ret;
     PRINT_INFO("MASTER: INFO: IN FUNC distribute_file: request slave %d to load file %s!\n", slave, file_node->hnode.str);
     ret = block_load_req(file_node->hnode.str, fill_block(&file_node->blocks[0], 0, file_node->size, 0, slave));
-    if (ret) {
+    if (ret != 0) {
         PRINT_INFO("MASTER: ERROR: IN FUNC distribute_file: block load request failed!\n");
         return -4;
     }
