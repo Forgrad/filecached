@@ -13,12 +13,14 @@
 
 
 #include "../common/hashtable.h"
-
+#include "../common/common.h"
 /*文件描述结构*/
 typedef struct dmf_file
 {
-    struct hash_node *hnode;/*共享或临时文件元数据挂载的hash节点指针*/
     size_t file_pos;/*文件访问操作偏移*/
+    int flag;       /*flag = 1 时 为share_file*/
+    void *file_info; /* 文件信息（share_file or private_file) */
+
 }dmf_file;
 
 /*以下都是上层应用所需要的接口api原型*/
@@ -72,5 +74,3 @@ dmf_remove(char filename[]);
  * dmf_gets返回NULL原因：文件描述符或缓存区buff为NULL
  * dmf_seek返回-1可能原因：所要定位的位置超出了文件已有的范围
  * ****************************/
-
-

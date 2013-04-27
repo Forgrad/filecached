@@ -16,7 +16,7 @@
 #include "../common/hashtable.h"
 #include "../common/common.h"
 #include "mem_manage.h"
-
+#include "../common/log.h"
 
 /*用于记录单机内存数据信息位置的哈希表，静态全局变量*/
 static HASH_TABLE(mem_hash);
@@ -104,20 +104,37 @@ ssize_t mem_write(char filename[], size_t size, void* buf)
 
 /*从外存读入数据 根据block给定的数据长度*/
 ssize_t
-mem_write_block(char filename[], struct block *block)
+mem_write_block(managememory *manager, char filename[], struct block *block)
 {
-    struct hash_node *node=hash_get(filename,mem_hash);
-    mem_node *m_node=hash_entry(node,mem_node,hnode);
-    size_t mem_size=m_node->size;
-    if (block->size>mem_size) return -1;
-    //memcpy(m_node->startpos,buf,size);
-
     FILE * file = fopen(filename,"r");
     if (file == NULL) {
         return -1;
     }
+    if(0 != mem_malloc(manager, filename, block->size))
+        return -1;
+    struct hash_node *node=hash_get(filename,mem_hash);
+    mem_node *m_node=hash_entry(node,mem_node,hnode);
+    size_t mem_size=m_node->size;
     mem_size = fread(m_node->startpos,1,block->size,file);
+
     if(block->size != mem_size) return -1;
     m_node->iswritting=0;
     return 0;
 }
+
+//ssize_t
+//mem_write_block(char filename[], struct block *block)
+//{
+//    struct hash_node *node=hash_get(filename,mem_hash);
+//    mem_node *m_node=hash_entry(node,mem_node,hnode);
+//    size_t mem_size=m_node->size;
+//    if (block->size>mem_size) return -1;
+//    //memcpy(m_node->startpos,buf,size);
+//
+//    FILE * file = fopen(filename,"r");
+//    mem_size = fread(m_node->startpos,1,block->size,file);
+//    if(block->size != mem_size) return -1;
+//    m_node->iswritting=0;
+//    return 0;
+//}
+
