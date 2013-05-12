@@ -81,8 +81,8 @@ strcatn(char *path, int n)
     }
     return path;
 }
-
-#if defined(DEBUG)
+#define INFO 1
+#if defined(INFO)
 #define PRINT_INFO(format,...) \
     printf(format, ##__VA_ARGS__);
 #else

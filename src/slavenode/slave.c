@@ -220,16 +220,16 @@ handle_load_request(struct handler_param *handler_param)
                &block, 1, mpi_block_type, MPI_COMM_WORLD);
 
     /* 为文件分配内存 */
-    ret = mem_malloc(&manager, file, block.size);
+/*    ret = mem_malloc(&manager, file, block.size);
     if(ret != 0)
     {
         LOG_MSG("ERROR： IN FUNC handle_load_request: file memory allocation failed!\n");
         return ret;
     }
     LOG_MSG("INFO： IN FUNC handle_load_request: file memory allocation succeed!\n");
-
+*/
     /* 写入文件数据 */
-    ret = mem_write_block(file, &block);
+    ret = mem_write_block(&manager, file, &block);
     if(ret != 0)
     {
         LOG_MSG("ERROR： IN FUNC handle_load_request: file load failed!\n");
