@@ -54,6 +54,10 @@ mem_write(char filename[], size_t size, void *buf);
 
 /*从外存读入数据 根据block给定的数据长度*/
 ssize_t
-mem_write_block(char filename[], struct block *block);
+mem_write_block(managememory *manager, char filename[], struct block *block);
+
+/*从外存读入数据 根据block给定的数据长度*/
+//ssize_t
+//mem_write_block(char filename[], struct block *block);
 
 #endif

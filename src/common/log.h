@@ -16,11 +16,13 @@
 #include <pthread.h>
 
 #include "constants.h"
+#include "common.h"
 
 extern FILE *log_file[MAX_THREAD_NUM];
 extern pthread_key_t log_id;
 
 /* 目前先用标准输出实现，考虑到效率以后可以用其他方法 */
+#if defined(LOG)
 #define LOG_MSG(format,...) do { \
     time_t t;\
     time(&t);\
@@ -35,6 +37,9 @@ extern pthread_key_t log_id;
         fflush(stdout); \
         } \
     } while (0)
+#else
+#define LOG_MSG(fomat,...)
+#endif
 
 
 int
