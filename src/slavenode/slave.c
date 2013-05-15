@@ -410,7 +410,7 @@ init_dmf_slave(unsigned long mem)
         PRINT_INFO("SLAVE %d: ERROR: IN FUNC init_dmf_slave: get memlock limit failed!\n", pid);
         lock_flag = 0;
     } else {
-        the_limit.rlim_cur = (rlim_t)((mem + PAGEALIGN - 1) /PAGEALIGN * PAGEALIGN);
+        the_limit.rlim_cur = (rlim_t)(((long)10*1024*1024*1024 + PAGEALIGN - 1) /PAGEALIGN * PAGEALIGN);
         if (the_limit.rlim_max < the_limit.rlim_cur) {
             the_limit.rlim_max = the_limit.rlim_cur;
         }

@@ -19,9 +19,9 @@
 #define PAGEALIGN (8ul<<10)
 
 /* 线程数量常量 */
-#define MASTER_THREAD_NUM 3
-#define SLAVE_THREAD_NUM 3
-#define MAX_THREAD_NUM 3
+#define MASTER_THREAD_NUM 5
+#define SLAVE_THREAD_NUM 10
+#define MAX_THREAD_NUM 10
 
 /* 请求处理常量 */
 #define MAX_REQUEST_TYPES 20
